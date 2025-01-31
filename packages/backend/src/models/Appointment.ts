@@ -18,6 +18,7 @@ export interface IAppointment extends Document {
   room: mongoose.Types.ObjectId;
   startTime: Date;
   endTime: Date;
+  price: number; 
   status: AppointmentStatus;
   paymentStatus: PaymentStatus;
   note?: string;
@@ -54,6 +55,11 @@ const appointmentSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  price: {
+    type: Number,
+    required: true,
+    min: 0
+  },
   status: {
     type: String,
     enum: Object.values(AppointmentStatus),
@@ -86,4 +92,3 @@ appointmentSchema.index({ patient: 1, startTime: 1 });
 appointmentSchema.index({ room: 1, startTime: 1 });
 
 export const Appointment = mongoose.model<IAppointment>('Appointment', appointmentSchema);
-

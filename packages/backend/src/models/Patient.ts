@@ -20,7 +20,6 @@ export interface IPatient extends Document {
   address: IAddress;
   phoneNumber: string;
   email: string;
-  appointments?: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,11 +72,7 @@ const patientSchema = new mongoose.Schema({
     unique: true,
     trim: true,
     lowercase: true
-  },
-  appointments: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Appointment'
-  }]
+  }
 }, {
   timestamps: true
 });
