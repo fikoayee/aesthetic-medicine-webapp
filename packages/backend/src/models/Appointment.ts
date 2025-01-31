@@ -1,14 +1,28 @@
-import mongoose from 'mongoose';
+import mongoose, { Document } from 'mongoose';
 
-enum AppointmentStatus {
+export enum AppointmentStatus {
   BOOKED = 'booked',
   ONGOING = 'ongoing',
   CANCELED = 'canceled'
 }
 
-enum PaymentStatus {
-PAID = 'paid',
-UNPAID = 'unpaid'
+export enum PaymentStatus {
+  PAID = 'paid',
+  UNPAID = 'unpaid'
+}
+
+export interface IAppointment extends Document {
+  doctor: mongoose.Types.ObjectId;
+  patient: mongoose.Types.ObjectId;
+  treatment: mongoose.Types.ObjectId;
+  room: mongoose.Types.ObjectId;
+  startTime: Date;
+  endTime: Date;
+  status: AppointmentStatus;
+  paymentStatus: PaymentStatus;
+  note?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const appointmentSchema = new mongoose.Schema({
@@ -71,5 +85,5 @@ appointmentSchema.index({ doctor: 1, startTime: 1 });
 appointmentSchema.index({ patient: 1, startTime: 1 });
 appointmentSchema.index({ room: 1, startTime: 1 });
 
-export const Appointment = mongoose.model('Appointment', appointmentSchema);
-export { AppointmentStatus, PaymentStatus };
+export const Appointment = mongoose.model<IAppointment>('Appointment', appointmentSchema);
+
