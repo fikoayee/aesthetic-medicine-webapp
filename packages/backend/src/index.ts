@@ -5,6 +5,12 @@ import dotenv from 'dotenv';
 import { connectDB } from './config/database';
 import { logger } from './config/logger';
 import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/user.routes';
+import patientRoutes from './routes/patient.routes';
+import treatmentRoutes from './routes/treatment.routes';
+import roomRoutes from './routes/room.routes';
+import doctorRoutes from './routes/doctor.routes';
+import specializationRoutes from './routes/specialization.routes';
 
 dotenv.config();
 
@@ -24,6 +30,12 @@ app.use(express.json());
 
 // Routes
 app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
+app.use('/patients', patientRoutes);
+app.use('/treatments', treatmentRoutes);
+app.use('/rooms', roomRoutes);
+app.use('/doctors', doctorRoutes);
+app.use('/specializations', specializationRoutes);
 
 // Basic health check route
 app.get('/health', (req, res) => {

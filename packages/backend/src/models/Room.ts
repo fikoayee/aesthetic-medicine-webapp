@@ -1,4 +1,11 @@
-import mongoose from 'mongoose';
+import mongoose, { Document } from 'mongoose';
+
+export interface IRoom extends Document {
+  name: string;
+  specializations: mongoose.Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const roomSchema = new mongoose.Schema({
   name: {
@@ -16,4 +23,4 @@ const roomSchema = new mongoose.Schema({
   timestamps: true
 });
 
-export const Room = mongoose.model('Room', roomSchema);
+export const Room = mongoose.model<IRoom>('Room', roomSchema);

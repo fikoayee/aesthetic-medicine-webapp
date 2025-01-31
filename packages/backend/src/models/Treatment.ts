@@ -1,4 +1,14 @@
-import mongoose from 'mongoose';
+import mongoose, { Document } from 'mongoose';
+
+export interface ITreatment extends Document {
+  name: string;
+  description: string;
+  duration: number;
+  price: number;
+  specialization: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const treatmentSchema = new mongoose.Schema({
   name: {
@@ -29,4 +39,4 @@ const treatmentSchema = new mongoose.Schema({
   timestamps: true
 });
 
-export const Treatment = mongoose.model('Treatment', treatmentSchema);
+export const Treatment = mongoose.model<ITreatment>('Treatment', treatmentSchema);

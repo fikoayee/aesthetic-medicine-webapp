@@ -1,9 +1,28 @@
-import mongoose from 'mongoose';
+import mongoose, { Document } from 'mongoose';
 
-enum Gender {
+export enum Gender {
   MALE = 'male',
   FEMALE = 'female',
   NOT_SPECIFIED = 'not_specified'
+}
+
+interface IAddress {
+  street: string;
+  city: string;
+  postalCode: string;
+}
+
+export interface IPatient extends Document {
+  firstName: string;
+  lastName: string;
+  birthDate: Date;
+  gender: Gender;
+  address: IAddress;
+  phoneNumber: string;
+  email: string;
+  appointments?: mongoose.Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const patientSchema = new mongoose.Schema({
@@ -50,6 +69,8 @@ const patientSchema = new mongoose.Schema({
   },
   email: {
     type: String,
+    required: true,
+    unique: true,
     trim: true,
     lowercase: true
   },
@@ -61,5 +82,4 @@ const patientSchema = new mongoose.Schema({
   timestamps: true
 });
 
-export const Patient = mongoose.model('Patient', patientSchema);
-export { Gender };
+export const Patient = mongoose.model<IPatient>('Patient', patientSchema);

@@ -1,4 +1,32 @@
-import mongoose from 'mongoose';
+import mongoose, { Document } from 'mongoose';
+
+interface IWorkingHours {
+  start: string;  // Format: "HH:mm"
+  end: string;    // Format: "HH:mm"
+}
+
+interface IWorkingDay {
+  isWorking: boolean;
+  hours?: IWorkingHours;
+}
+
+interface IWorkingDayException {
+  date: Date;
+  isWorking: boolean;
+  hours?: IWorkingHours;
+}
+
+export interface IDoctor extends Document {
+  firstName: string;
+  lastName: string;
+  specializations: mongoose.Types.ObjectId[];
+  phoneNumber: string;
+  email: string;
+  workingDays: Map<string, IWorkingDay>;
+  workingDaysExceptions: IWorkingDayException[];
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const workingDayExceptionSchema = new mongoose.Schema({
   date: {
@@ -9,11 +37,11 @@ const workingDayExceptionSchema = new mongoose.Schema({
     type: Boolean,
     required: true
   },
-  customHours: {
-    start: Date,
-    end: Date
+  hours: {
+    start: String,
+    end: String
   }
-});
+}, { _id: false });
 
 const doctorSchema = new mongoose.Schema({
   firstName: {
@@ -26,6 +54,16 @@ const doctorSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  specializations: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Specialization',
+    required: true
+  }],
+  phoneNumber: {
+    type: String,
+    required: true,
+    trim: true
+  },
   email: {
     type: String,
     required: true,
@@ -33,39 +71,29 @@ const doctorSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
-  phoneNumber: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  specializations: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Specialization',
-    required: true
-  }],
   workingDays: {
     type: Map,
     of: {
       isWorking: Boolean,
       hours: {
-        start: String, // Format: "HH:mm"
-        end: String    // Format: "HH:mm"
+        start: String,
+        end: String
       }
     },
     required: true,
-    default: {
-      'monday': { isWorking: true, hours: { start: '09:00', end: '17:00' } },
-      'tuesday': { isWorking: true, hours: { start: '09:00', end: '17:00' } },
-      'wednesday': { isWorking: true, hours: { start: '09:00', end: '17:00' } },
-      'thursday': { isWorking: true, hours: { start: '09:00', end: '17:00' } },
-      'friday': { isWorking: true, hours: { start: '09:00', end: '17:00' } },
-      'saturday': { isWorking: false },
-      'sunday': { isWorking: false }
-    }
+    default: new Map([
+      ['monday', { isWorking: true, hours: { start: '09:00', end: '17:00' } }],
+      ['tuesday', { isWorking: true, hours: { start: '09:00', end: '17:00' } }],
+      ['wednesday', { isWorking: true, hours: { start: '09:00', end: '17:00' } }],
+      ['thursday', { isWorking: true, hours: { start: '09:00', end: '17:00' } }],
+      ['friday', { isWorking: true, hours: { start: '09:00', end: '17:00' } }],
+      ['saturday', { isWorking: false }],
+      ['sunday', { isWorking: false }]
+    ])
   },
   workingDaysExceptions: [workingDayExceptionSchema]
 }, {
   timestamps: true
 });
 
-export const Doctor = mongoose.model('Doctor', doctorSchema);
+export const Doctor = mongoose.model<IDoctor>('Doctor', doctorSchema);
