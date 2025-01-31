@@ -1,5 +1,6 @@
 import mongoose, { Document } from 'mongoose';
-import bcrypt from 'mongoose-bcrypt';
+import bcrypt from 'bcrypt';
+import mongooseBcrypt from 'mongoose-bcrypt';
 
 enum UserRole {
   ADMIN = 'ADMIN',
@@ -71,7 +72,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Add bcrypt plugin
-userSchema.plugin(bcrypt);
+userSchema.plugin(mongooseBcrypt);
 
 // Add method to check if user is a doctor
 userSchema.methods.isDoctor = function(this: IUser): boolean {

@@ -24,10 +24,14 @@ export const generateToken = (user: IUser): string => {
     role: user.role
   };
 
+  const options: jwt.SignOptions = {
+    expiresIn: process.env.JWT_EXPIRES_IN ? parseInt(process.env.JWT_EXPIRES_IN) : 6000
+  };
+
   return jwt.sign(
     payload,
     process.env.JWT_SECRET || 'your_jwt_secret_here',
-    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+    options
   );
 };
 

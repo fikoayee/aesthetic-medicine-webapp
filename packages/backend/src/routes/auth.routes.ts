@@ -5,11 +5,10 @@ import { UserRole } from '../models/User';
 
 const router = express.Router();
 
-// Public routes
 router.post('/login', AuthController.login);
-router.post('/register', authenticate, authorize(UserRole.ADMIN), AuthController.register);
 
 // Protected routes
+router.post('/register', authenticate, authorize(UserRole.ADMIN), AuthController.register);
 router.post('/change-password', authenticate, AuthController.changePassword);
 
 export default router;

@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database';
 import { logger } from './config/logger';
+import authRoutes from './routes/auth.routes';
 
 dotenv.config();
 
@@ -20,6 +21,9 @@ app.use(cors({
 }));
 app.use(helmet());
 app.use(express.json());
+
+// Routes
+app.use('/auth', authRoutes);
 
 // Basic health check route
 app.get('/health', (req, res) => {
