@@ -33,8 +33,8 @@ export class AuthService {
         throw new Error('Invalid username or password');
       }
 
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, user.password);
+      // Verify password using the model's method
+      const isValidPassword = await user.verifyPassword(password);
       if (!isValidPassword) {
         throw new Error('Invalid username or password');
       }
@@ -53,7 +53,7 @@ export class AuthService {
         }
       };
     } catch (error) {
-      logger.error('Login error:', error);
+      logger.error('Login service error:', error);
       throw error;
     }
   }

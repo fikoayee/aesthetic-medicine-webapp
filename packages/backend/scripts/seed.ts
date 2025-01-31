@@ -6,7 +6,6 @@ import { Treatment } from '../src/models/Treatment';
 import { Room } from '../src/models/Room';
 import { Appointment, AppointmentStatus, PaymentStatus } from '../src/models/Appointment';
 import { Specialization } from '../src/models/Specialization';
-import bcrypt from 'bcrypt';
 
 const seedDatabase = async () => {
   try {
@@ -27,13 +26,10 @@ const seedDatabase = async () => {
     });
 
     // Create users
-    const hashedAdminPassword = await bcrypt.hash('admin123', 10);
-    const hashedReceptionistPassword = await bcrypt.hash('receptionist123', 10);
-
     const admin = await User.create({
       username: 'admin',
       email: 'admin@clinic.com',
-      password: hashedAdminPassword,
+      password: 'admin123',
       firstName: 'Admin',
       lastName: 'User',
       phoneNumber: '+48123456788',
@@ -43,7 +39,7 @@ const seedDatabase = async () => {
     const receptionist = await User.create({
       username: 'receptionist',
       email: 'receptionist@clinic.com',
-      password: hashedReceptionistPassword,
+      password: 'receptionist123',
       firstName: 'Reception',
       lastName: 'Staff',
       phoneNumber: '+48123456787',
@@ -69,11 +65,10 @@ const seedDatabase = async () => {
     });
 
     // Create doctor user account
-    const hashedDoctorPassword = await bcrypt.hash('doctor123', 10);
     const doctorUser1 = await User.create({
       username: 'johndoe',
       email: 'johndoe@clinic.com',
-      password: hashedDoctorPassword,
+      password: 'doctor123',
       firstName: doctor1.firstName,
       lastName: doctor1.lastName,
       phoneNumber: doctor1.phoneNumber,
@@ -99,11 +94,10 @@ const seedDatabase = async () => {
     });
 
     // Create doctor user account
-    const hashedDoctor2Password = await bcrypt.hash('doctor456', 10);
     const doctorUser2 = await User.create({
       username: 'janesmith',
       email: 'janesmith@clinic.com',
-      password: hashedDoctor2Password,
+      password: 'doctor456',
       firstName: doctor2.firstName,
       lastName: doctor2.lastName,
       phoneNumber: doctor2.phoneNumber,
