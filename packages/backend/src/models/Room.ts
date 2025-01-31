@@ -1,23 +1,25 @@
-import mongoose, { Document } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
+import { ISpecialization } from './Specialization';
 
 export interface IRoom extends Document {
   name: string;
-  specializations: mongoose.Types.ObjectId[];
-  createdAt: Date;
-  updatedAt: Date;
+  description: string;
+  specializations: mongoose.Types.ObjectId[] | ISpecialization[];
 }
 
-const roomSchema = new mongoose.Schema({
+const roomSchema = new Schema({
   name: {
     type: String,
     required: true,
     unique: true,
-    trim: true
+  },
+  description: {
+    type: String,
+    required: true,
   },
   specializations: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Specialization',
-    required: true
+    type: Schema.Types.ObjectId,
+    ref: 'Specialization'
   }]
 }, {
   timestamps: true

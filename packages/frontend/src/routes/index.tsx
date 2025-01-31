@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Login from '../pages/Login';
 import Dashboard from '../pages/Dashboard';
+import Rooms from '../pages/Rooms';
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -36,6 +37,15 @@ export const AppRoutes = () => {
         element={
           <PrivateRoute>
             <Dashboard />
+          </PrivateRoute>
+        }
+      />
+
+      <Route
+        path="/rooms"
+        element={
+          <PrivateRoute>
+            <Rooms />
           </PrivateRoute>
         }
       />

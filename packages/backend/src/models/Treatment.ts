@@ -1,39 +1,31 @@
-import mongoose, { Document } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ITreatment extends Document {
   name: string;
   description: string;
   duration: number;
   price: number;
-  specialization: mongoose.Types.ObjectId;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
-const treatmentSchema = new mongoose.Schema({
+const treatmentSchema = new Schema({
   name: {
     type: String,
     required: true,
-    trim: true
+    unique: true,
   },
   description: {
     type: String,
-    required: true
+    required: true,
   },
   duration: {
-    type: Number, // Duration in minutes
+    type: Number,
     required: true,
-    min: 1
+    min: 1,
   },
   price: {
     type: Number,
     required: true,
-    min: 0
-  },
-  specialization: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Specialization',
-    required: true
+    min: 0,
   }
 }, {
   timestamps: true

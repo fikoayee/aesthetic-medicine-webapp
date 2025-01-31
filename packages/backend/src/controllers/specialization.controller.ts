@@ -1,14 +1,22 @@
 import { Request, Response } from 'express';
-import { SpecializationService } from '../services/specialization.service';
+import { Specialization } from '../models/Specialization';
+import { Treatment } from '../models/Treatment';
 import { logger } from '../config/logger';
 
 export class SpecializationController {
   static async getAllSpecializations(req: Request, res: Response) {
     try {
-      const specializations = await SpecializationService.getAllSpecializations();
+      const specializations = await Specialization.find().populate({
+        path: 'treatments',
+        model: Treatment,
+        select: 'name description duration price'
+      });
+      
       return res.status(200).json({
         status: 'success',
-        data: { specializations }
+        data: {
+          specializations
+        }
       });
     } catch (error) {
       logger.error('Get all specializations error:', error);
@@ -21,8 +29,11 @@ export class SpecializationController {
 
   static async getSpecializationById(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      const specialization = await SpecializationService.getSpecializationById(id);
+      const specialization = await Specialization.findById(req.params.id).populate({
+        path: 'treatments',
+        model: Treatment,
+        select: 'name description duration price'
+      });
       
       if (!specialization) {
         return res.status(404).json({
@@ -33,7 +44,9 @@ export class SpecializationController {
 
       return res.status(200).json({
         status: 'success',
-        data: { specialization }
+        data: {
+          specialization
+        }
       });
     } catch (error) {
       logger.error('Get specialization by id error:', error);
@@ -53,7 +66,7 @@ export class SpecializationController {
         });
       }
 
-      const specialization = await SpecializationService.createSpecialization(req.body);
+      const specialization = await Specialization.create(req.body);
       return res.status(201).json({
         status: 'success',
         data: { specialization }
@@ -77,7 +90,7 @@ export class SpecializationController {
       }
 
       const { id } = req.params;
-      const specialization = await SpecializationService.updateSpecialization(id, req.body);
+      const specialization = await Specialization.findByIdAndUpdate(id, req.body, { new: true });
       
       if (!specialization) {
         return res.status(404).json({
@@ -109,7 +122,7 @@ export class SpecializationController {
       }
 
       const { id } = req.params;
-      const success = await SpecializationService.deleteSpecialization(id);
+      const success = await Specialization.findByIdAndDelete(id);
       
       if (!success) {
         return res.status(404).json({

@@ -1,14 +1,27 @@
 import { Request, Response } from 'express';
-import { RoomService } from '../services/room.service';
+import { Room } from '../models/Room';
+import { Specialization } from '../models/Specialization';
+import { Treatment } from '../models/Treatment';
 import { logger } from '../config/logger';
 
 export class RoomController {
   static async getAllRooms(req: Request, res: Response) {
     try {
-      const rooms = await RoomService.getAllRooms();
+      const rooms = await Room.find().populate({
+        path: 'specializations',
+        model: Specialization,
+        populate: {
+          path: 'treatments',
+          model: Treatment,
+          select: 'name description duration price'
+        }
+      });
+      
       return res.status(200).json({
         status: 'success',
-        data: { rooms }
+        data: {
+          rooms
+        }
       });
     } catch (error) {
       logger.error('Get all rooms error:', error);
@@ -21,8 +34,15 @@ export class RoomController {
 
   static async getRoomById(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      const room = await RoomService.getRoomById(id);
+      const room = await Room.findById(req.params.id).populate({
+        path: 'specializations',
+        model: Specialization,
+        populate: {
+          path: 'treatments',
+          model: Treatment,
+          select: 'name description duration price'
+        }
+      });
       
       if (!room) {
         return res.status(404).json({
@@ -33,7 +53,9 @@ export class RoomController {
 
       return res.status(200).json({
         status: 'success',
-        data: { room }
+        data: {
+          room
+        }
       });
     } catch (error) {
       logger.error('Get room by id error:', error);
@@ -53,10 +75,22 @@ export class RoomController {
         });
       }
 
-      const room = await RoomService.createRoom(req.body);
+      const room = await Room.create(req.body);
+      const populatedRoom = await room.populate({
+        path: 'specializations',
+        model: Specialization,
+        populate: {
+          path: 'treatments',
+          model: Treatment,
+          select: 'name description duration price'
+        }
+      });
+
       return res.status(201).json({
         status: 'success',
-        data: { room }
+        data: {
+          room: populatedRoom
+        }
       });
     } catch (error) {
       logger.error('Create room error:', error);
@@ -76,9 +110,20 @@ export class RoomController {
         });
       }
 
-      const { id } = req.params;
-      const room = await RoomService.updateRoom(id, req.body);
-      
+      const room = await Room.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        { new: true }
+      ).populate({
+        path: 'specializations',
+        model: Specialization,
+        populate: {
+          path: 'treatments',
+          model: Treatment,
+          select: 'name description duration price'
+        }
+      });
+
       if (!room) {
         return res.status(404).json({
           status: 'error',
@@ -88,7 +133,9 @@ export class RoomController {
 
       return res.status(200).json({
         status: 'success',
-        data: { room }
+        data: {
+          room
+        }
       });
     } catch (error) {
       logger.error('Update room error:', error);
@@ -108,10 +155,9 @@ export class RoomController {
         });
       }
 
-      const { id } = req.params;
-      const success = await RoomService.deleteRoom(id);
+      const room = await Room.findByIdAndDelete(req.params.id);
       
-      if (!success) {
+      if (!room) {
         return res.status(404).json({
           status: 'error',
           message: 'Room not found'
