@@ -17,6 +17,7 @@ interface IUser extends Document {
   role: UserRole;
   doctorId?: mongoose.Types.ObjectId;
   isDoctor(): boolean;
+  verifyPassword(password: string): Promise<boolean>;
 }
 
 const userSchema = new mongoose.Schema({
@@ -75,6 +76,11 @@ userSchema.plugin(bcrypt);
 // Add method to check if user is a doctor
 userSchema.methods.isDoctor = function(this: IUser): boolean {
   return this.role === UserRole.DOCTOR;
+};
+
+// Add method to verify password
+userSchema.methods.verifyPassword = function(this: IUser, password: string): Promise<boolean> {
+  return bcrypt.compare(password, this.password);
 };
 
 export const User = mongoose.model<IUser>('User', userSchema);
