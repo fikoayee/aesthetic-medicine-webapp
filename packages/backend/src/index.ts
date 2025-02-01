@@ -12,6 +12,7 @@ import treatmentRoutes from './routes/treatment.routes';
 import roomRoutes from './routes/room.routes';
 import doctorRoutes from './routes/doctor.routes';
 import specializationRoutes from './routes/specialization.routes';
+import appointmentRoutes from './routes/appointment.routes';
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ app.use('/rooms', roomRoutes);
 app.use('/doctors', doctorRoutes);
 app.use('/specializations', specializationRoutes);
 app.use('/treatments', treatmentRoutes);
+app.use('/appointments', appointmentRoutes);
 
 // Basic health check route
 app.get('/health', (req, res) => {

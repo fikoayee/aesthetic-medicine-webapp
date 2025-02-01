@@ -16,7 +16,10 @@ export class AppointmentController {
       if (status) filters.status = status as AppointmentStatus;
 
       const appointments = await AppointmentService.getAllAppointments(filters);
-      res.json(appointments);
+      res.json({
+        status: 'success',
+        data: { appointments }
+      });
     } catch (error) {
       next(error);
     }

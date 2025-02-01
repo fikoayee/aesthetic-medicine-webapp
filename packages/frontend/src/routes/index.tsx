@@ -5,6 +5,7 @@ import Dashboard from '../pages/Dashboard';
 import Rooms from '../pages/Rooms';
 import Treatments from '../pages/Treatments';
 import Doctors from '../pages/Doctors';
+import Patients from '../pages/Patients';
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -66,6 +67,15 @@ export const AppRoutes = () => {
           element={
             <PrivateRoute>
               <Doctors />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/patients"
+          element={
+            <PrivateRoute>
+              <Patients />
             </PrivateRoute>
           }
         />
