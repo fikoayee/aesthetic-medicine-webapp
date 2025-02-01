@@ -1,7 +1,6 @@
 import { User, IUser, UserRole } from '../models/User';
 import { generateToken } from '../middleware/auth';
 import { logger } from '../config/logger';
-import bcrypt from 'bcrypt';
 
 interface UserResponse {
   id: string;
@@ -72,7 +71,7 @@ export class AuthService {
         throw new Error('User with this username or email already exists');
       }
 
-      // Create new user
+      // Create new user - password will be hashed by the pre-save hook
       const user = new User(userData);
       await user.save();
 
@@ -101,13 +100,13 @@ export class AuthService {
       }
 
       // Verify current password
-      const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+      const isValidPassword = await user.verifyPassword(currentPassword);
       if (!isValidPassword) {
         throw new Error('Current password is incorrect');
       }
 
       // Update password
-      user.password = await bcrypt.hash(newPassword, 10);
+      user.password = newPassword;
       await user.save();
 
       return true;

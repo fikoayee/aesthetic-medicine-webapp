@@ -1,6 +1,5 @@
 import mongoose, { Document } from 'mongoose';
 import bcrypt from 'bcrypt';
-import mongooseBcrypt from 'mongoose-bcrypt';
 
 enum UserRole {
   ADMIN = 'ADMIN',
@@ -30,8 +29,7 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
-    bcrypt: true
+    required: true
   },
   firstName: {
     type: String,
@@ -71,8 +69,14 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Add bcrypt plugin
-userSchema.plugin(mongooseBcrypt);
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+  if (this.isModified('password')) {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+  }
+  next();
+});
 
 // Add method to check if user is a doctor
 userSchema.methods.isDoctor = function(this: IUser): boolean {
@@ -80,8 +84,8 @@ userSchema.methods.isDoctor = function(this: IUser): boolean {
 };
 
 // Add method to verify password
-userSchema.methods.verifyPassword = function(this: IUser, password: string): Promise<boolean> {
-  return bcrypt.compare(password, this.password);
+userSchema.methods.verifyPassword = async function(this: IUser, password: string): Promise<boolean> {
+  return await bcrypt.compare(password, this.password);
 };
 
 export const User = mongoose.model<IUser>('User', userSchema);
