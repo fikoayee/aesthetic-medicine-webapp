@@ -4,6 +4,7 @@ import Login from '../pages/Login';
 import Dashboard from '../pages/Dashboard';
 import Rooms from '../pages/Rooms';
 import Treatments from '../pages/Treatments';
+import Doctors from '../pages/Doctors';
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -33,35 +34,44 @@ export const AppRoutes = () => {
       />
       
       {/* Private routes */}
-      <Route
-        path="/dashboard"
-        element={
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        }
-      />
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
 
-      <Route
-        path="/rooms"
-        element={
-          <PrivateRoute>
-            <Rooms />
-          </PrivateRoute>
-        }
-      />
+        <Route
+          path="/rooms"
+          element={
+            <PrivateRoute>
+              <Rooms />
+            </PrivateRoute>
+          }
+        />
 
-      <Route
-        path="/treatments"
-        element={
-          <PrivateRoute>
-            <Treatments />
-          </PrivateRoute>
-        }
-      />
-      
-      {/* Redirect root to dashboard */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/treatments"
+          element={
+            <PrivateRoute>
+              <Treatments />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/doctors"
+          element={
+            <PrivateRoute>
+              <Doctors />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Redirect root to dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
       
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
