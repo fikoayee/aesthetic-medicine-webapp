@@ -58,10 +58,10 @@ app.get('/test/error/async', async (req, res, next) => {
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/patients', patientRoutes);
-app.use('/treatments', treatmentRoutes);
 app.use('/rooms', roomRoutes);
 app.use('/doctors', doctorRoutes);
 app.use('/specializations', specializationRoutes);
+app.use('/treatments', treatmentRoutes);
 
 // Basic health check route
 app.get('/health', (req, res) => {

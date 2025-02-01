@@ -1,18 +1,11 @@
 import axiosInstance from './authService';
-
-export interface Treatment {
-  _id: string;
-  name: string;
-  description: string;
-  duration: number;
-  price: number;
-}
+import { Treatment } from './treatmentService';
 
 export interface Specialization {
   _id: string;
   name: string;
   description: string;
-  treatments?: Treatment[];
+  treatments: Treatment[];
 }
 
 export interface SpecializationResponse {
@@ -22,9 +15,21 @@ export interface SpecializationResponse {
   };
 }
 
+export interface SingleSpecializationResponse {
+  status: string;
+  data: {
+    specialization: Specialization;
+  };
+}
+
 export const specializationService = {
   async getAllSpecializations() {
     const response = await axiosInstance.get<SpecializationResponse>('/specializations');
     return response.data.data.specializations;
   },
+
+  async getSpecializationById(id: string) {
+    const response = await axiosInstance.get<SingleSpecializationResponse>(`/specializations/${id}`);
+    return response.data.data.specialization;
+  }
 };

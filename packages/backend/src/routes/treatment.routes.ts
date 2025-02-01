@@ -9,12 +9,14 @@ const router = express.Router();
 router.use(authenticate);
 
 // Routes accessible by all authenticated users
-router.get('/', TreatmentController.getAllTreatments);
-router.get('/:id', TreatmentController.getTreatmentById);
+router.get('/', authenticate,TreatmentController.getAllTreatments);
+router.get('/:id', authenticate, TreatmentController.getTreatmentById);
 
 // Routes that require ADMIN role
 router.post('/', authorize(UserRole.ADMIN), TreatmentController.createTreatment);
+
 router.put('/:id', authorize(UserRole.ADMIN), TreatmentController.updateTreatment);
+
 router.delete('/:id', authorize(UserRole.ADMIN), TreatmentController.deleteTreatment);
 
 export default router;
