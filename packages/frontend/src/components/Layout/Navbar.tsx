@@ -2,10 +2,12 @@ import { AppBar, Toolbar, Typography, IconButton, Menu, MenuItem, Box, Chip } fr
 import { AccountCircle } from '@mui/icons-material';
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const navigate = useNavigate();
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -18,6 +20,11 @@ const Navbar = () => {
   const handleLogout = () => {
     handleClose();
     logout();
+  };
+
+  const handleProfile = () => {
+    handleClose();
+    navigate('/profile');
   };
 
   return (
@@ -70,7 +77,7 @@ const Navbar = () => {
               open={Boolean(anchorEl)}
               onClose={handleClose}
             >
-              <MenuItem onClick={handleClose}>Profile</MenuItem>
+              <MenuItem onClick={handleProfile}>Profile</MenuItem>
               <MenuItem onClick={handleLogout}>Logout</MenuItem>
             </Menu>
           </Box>

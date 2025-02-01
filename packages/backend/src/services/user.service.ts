@@ -47,4 +47,27 @@ export class UserService {
       throw error;
     }
   }
+
+  static async getUserProfile(id: string): Promise<IUser | null> {
+    try {
+      const user = await User.findById(id)
+        .select('-password')
+        .populate({
+          path: 'doctorId',
+          populate: {
+            path: 'specializations',
+            model: 'Specialization'
+          }
+        });
+
+      if (!user) {
+        return null;
+      }
+
+      return user;
+    } catch (error) {
+      logger.error('Get user profile service error:', error);
+      throw error;
+    }
+  }
 }

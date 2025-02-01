@@ -2,14 +2,12 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-console.log('Using API URL:', API_URL); // Debug log
-
 const axiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // Important for cookies/CORS
+  withCredentials: true,
 });
 
 axiosInstance.interceptors.request.use((config) => {
@@ -38,20 +36,18 @@ interface LoginResponse {
 export const authService = {
   async login(username: string, password: string) {
     try {
-      console.log('Attempting login for user:', username); // Debug log
       const response = await axiosInstance.post<LoginResponse>('/auth/login', {
         username,
         password,
       });
-      console.log('Login response:', response.data); // Debug log
       
-      // Extract the actual data from the nested structure
-      return response.data.data;
+      const { token, user } = response.data.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      return { token, user };
     } catch (error) {
-      console.error('Login error:', error); // Debug log
       if (axios.isAxiosError(error)) {
-        console.error('Response data:', error.response?.data); // Debug log
-        console.error('Response status:', error.response?.status); // Debug log
         const errorMessage = error.response?.data?.message || 'Login failed';
         throw new Error(errorMessage);
       }
@@ -61,17 +57,28 @@ export const authService = {
 
   async getCurrentUser() {
     try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        return JSON.parse(storedUser);
+      }
+
       const response = await axiosInstance.get('/auth/me');
-      // The current user endpoint might also have the same structure
-      return response.data.data?.user || response.data;
+      const user = response.data.data?.user || response.data;
+      localStorage.setItem('user', JSON.stringify(user));
+      return user;
     } catch (error) {
-      console.error('Get current user error:', error); // Debug log
       if (axios.isAxiosError(error)) {
         throw new Error(error.response?.data?.message || 'Failed to get current user');
       }
       throw new Error('Failed to get current user');
     }
   },
+
+  logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  }
 };
 
 export default axiosInstance;

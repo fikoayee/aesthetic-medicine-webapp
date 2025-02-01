@@ -78,6 +78,47 @@ export class UserController {
     }
   }
 
+  static async getUserProfile(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      
+      if (req.user?.role !== 'ADMIN' && req.user?.id !== id) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Not authorized to view this profile'
+        });
+      }
+
+      const user = await UserService.getUserProfile(id);
+      
+      if (!user) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'User not found'
+        });
+      }
+
+      const userData = user.toObject();
+      if (user.role === 'DOCTOR' && user.doctorId) {
+        const doctorData = userData.doctorId;
+        delete userData.doctorId;
+        userData.doctor = doctorData;
+      }
+
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(200).json({
+        status: 'success',
+        data: { user: userData }
+      });
+    } catch (error) {
+      logger.error('Get user profile error:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Failed to get user profile'
+      });
+    }
+  }
+
   static async deleteUser(req: Request, res: Response) {
     try {
       const { id } = req.params;

@@ -13,6 +13,7 @@ router.get('/', authorize(UserRole.ADMIN), UserController.getAllUsers);
 router.delete('/:id', authorize(UserRole.ADMIN), UserController.deleteUser);
 
 // Routes that require authentication but can be accessed by the user themselves or ADMIN
+router.get('/:id/profile', UserController.getUserProfile);
 router.get('/:id', UserController.getUserById);
 router.put('/:id', UserController.updateUser);
 
