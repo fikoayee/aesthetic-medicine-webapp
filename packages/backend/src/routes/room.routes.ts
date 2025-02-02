@@ -1,20 +1,28 @@
 import express from 'express';
 import { RoomController } from '../controllers/room.controller';
-import { authenticate, authorize } from '../middleware/auth';
-import { UserRole } from '../models/User';
+import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
 
-// Routes accessible by all authenticated users
+// GET /rooms
 router.get('/', RoomController.getAllRooms);
+
+// GET /rooms/by-treatment
+router.get('/by-treatment', RoomController.getAvailableRoomsForTreatment);
+
+// GET /rooms/:id
 router.get('/:id', RoomController.getRoomById);
 
-// Routes that require ADMIN role
-router.post('/', authorize(UserRole.ADMIN), RoomController.createRoom);
-router.put('/:id', authorize(UserRole.ADMIN), RoomController.updateRoom);
-router.delete('/:id', authorize(UserRole.ADMIN), RoomController.deleteRoom);
+// POST /rooms
+router.post('/', RoomController.createRoom);
+
+// PUT /rooms/:id
+router.put('/:id', RoomController.updateRoom);
+
+// DELETE /rooms/:id
+router.delete('/:id', RoomController.deleteRoom);
 
 export default router;

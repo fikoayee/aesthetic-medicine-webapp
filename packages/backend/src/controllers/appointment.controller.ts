@@ -44,11 +44,14 @@ export class AppointmentController {
         roomId,
         startTime,
         endTime,
-        note
+        note,
+        price,
+        status,
+        paymentStatus
       } = req.body;
 
       // Basic validation
-      if (!doctorId || !patientId || !treatmentId || !roomId || !startTime || !endTime) {
+      if (!doctorId || !patientId || !treatmentId || !roomId || !startTime || !endTime || !price) {
         throw new ApiError(400, 'Missing required fields');
       }
 
@@ -59,10 +62,16 @@ export class AppointmentController {
         roomId,
         startTime: new Date(startTime),
         endTime: new Date(endTime),
-        note
+        note,
+        price,
+        status,
+        paymentStatus
       });
 
-      res.status(201).json(appointment);
+      res.status(201).json({
+        status: 'success',
+        data: appointment
+      });
     } catch (error) {
       next(error);
     }
@@ -116,6 +125,31 @@ export class AppointmentController {
       );
 
       res.json(slots);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async checkForConflicts(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { doctorId, roomId, patientId, startTime, endTime } = req.body;
+
+      // Basic validation
+      if (!doctorId || !roomId || !startTime || !endTime) {
+        throw new ApiError(400, 'Missing required fields');
+      }
+
+      const hasConflicts = await AppointmentService.checkForConflicts(
+        doctorId,
+        roomId,
+        new Date(startTime),
+        new Date(endTime)
+      );
+
+      res.json({
+        status: 'success',
+        data: { hasConflicts }
+      });
     } catch (error) {
       next(error);
     }

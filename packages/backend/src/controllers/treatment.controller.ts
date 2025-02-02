@@ -20,7 +20,6 @@ export class TreatmentController {
         }
       });
     } catch (error) {
-      logger.error('Get all treatments error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to get treatments'
@@ -50,7 +49,6 @@ export class TreatmentController {
         }
       });
     } catch (error) {
-      logger.error('Get treatment by id error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to get treatment'
@@ -92,7 +90,6 @@ export class TreatmentController {
         }
       });
     } catch (error) {
-      logger.error('Create treatment error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to create treatment'
@@ -155,7 +152,6 @@ export class TreatmentController {
         }
       });
     } catch (error) {
-      logger.error('Update treatment error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to update treatment'
@@ -187,7 +183,6 @@ export class TreatmentController {
         data: null
       });
     } catch (error) {
-      logger.error('Delete treatment error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to delete treatment'

@@ -19,7 +19,11 @@ import {
   CircularProgress,
   Box,
   FormHelperText,
-  Paper
+  FormLabel,
+  Paper,
+  List,
+  ListItem,
+  ListItemText
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -27,10 +31,10 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
-import { appointmentService, AppointmentFormData, NewPatientData, TimeSlotConflict } from '../../services/appointmentService';
-import { Doctor } from '../../services/doctorService';
-import { Treatment } from '../../services/treatmentService';
-import { Room } from '../../services/roomService';
+import { appointmentService, AppointmentFormData, NewPatientData, AppointmentStatus, PaymentStatus } from '../../services/appointmentService';
+import { Doctor } from '../../types/doctor';
+import { Treatment } from '../../types/treatment';
+import { Room } from '../../types/room';
 import { Patient } from '../../types/patient';
 
 interface AppointmentModalProps {
@@ -68,16 +72,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
   const [patientType, setPatientType] = useState<'existing' | 'new'>('existing');
   const [appointmentData, setAppointmentData] = useState<AppointmentFormData>(initialAppointmentData);
   const [newPatientData, setNewPatientData] = useState<NewPatientData>(initialNewPatientData);
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [availableSlots, setAvailableSlots] = useState<Array<{ startTime: string; endTime: string; roomId: string }>>([]);
-  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
-  const [conflicts, setConflicts] = useState<TimeSlotConflict[]>([]);
-  const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
-
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [doctorAvailability, setDoctorAvailability] = useState<Record<string, { startTime: string; endTime: string }[]>>({});
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
 
   // Data for dropdowns
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -89,27 +85,82 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
   // State for available doctors and rooms based on treatment
   const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
+        setLoading(true);
         const [doctorsData, treatmentsData, roomsData] = await Promise.all([
           appointmentService.getDoctors(),
           appointmentService.getTreatments(),
-          appointmentService.getRooms(),
+          appointmentService.getRooms()
         ]);
-        setDoctors(doctorsData);
+
+        console.log('Fetched data:', { doctorsData, treatmentsData, roomsData });
+        
+        if (!treatmentsData?.length) {
+          console.error('No treatments data received');
+          toast.error('Failed to load treatments');
+          return;
+        }
+
+        setDoctors(doctorsData || []);
         setTreatments(treatmentsData);
-        setRooms(roomsData);
+        setRooms(roomsData || []);
       } catch (error) {
-        toast.error('Error loading initial data');
-        console.error('Error:', error);
+        console.error('Error fetching initial data:', error);
+        toast.error('Failed to load appointment data');
+      } finally {
+        setLoading(false);
       }
     };
+
     if (open) {
       fetchInitialData();
     }
   }, [open]);
+
+  useEffect(() => {
+    const updateAvailability = async () => {
+      if (!appointmentData.treatmentId) {
+        setAvailableDoctors([]);
+        setAvailableRooms([]);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log('Fetching available doctors and rooms for treatment:', appointmentData.treatmentId);
+        
+        const [doctorsData, roomsData] = await Promise.all([
+          appointmentService.getAvailableDoctorsForTreatment(appointmentData.treatmentId),
+          appointmentService.getAvailableRoomsForTreatment(appointmentData.treatmentId)
+        ]);
+
+        console.log('Available data:', { doctorsData, roomsData });
+
+        // Set available doctors
+        setAvailableDoctors(doctorsData);
+        setAvailableRooms(roomsData);
+
+        // If no doctors/rooms available, show appropriate message
+        if (!doctorsData.length) {
+          toast.warning('No doctors available for this treatment');
+        }
+        if (!roomsData.length) {
+          toast.warning('No rooms available for this treatment');
+        }
+      } catch (error) {
+        console.error('Error updating availability:', error);
+        toast.error('Failed to load available doctors and rooms');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    updateAvailability();
+  }, [appointmentData.treatmentId]);
 
   useEffect(() => {
     const searchPatients = async () => {
@@ -130,71 +181,91 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
 
   useEffect(() => {
     const fetchDoctorAvailability = async () => {
-      if (selectedDate) {
+      if (selectedDate && appointmentData.doctorId) {
         try {
-          const availability = await appointmentService.getDoctorAvailability(selectedDate.toISOString());
-          const availabilityMap = availability.reduce((acc, curr) => {
-            acc[curr.doctorId] = curr.availableSlots;
-            return acc;
-          }, {} as Record<string, { startTime: string; endTime: string }[]>);
-          setDoctorAvailability(availabilityMap);
+          const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+          console.log('Fetching availability for date:', formattedDate);
+          
+          const availability = await appointmentService.getDoctorAvailability(formattedDate);
+          console.log('Received availability:', availability);
+          
+          if (!availability || availability.length === 0) {
+            toast.info('No availability found for selected date');
+            return;
+          }
+          
+          const doctorSlots = availability.find(a => a.doctorId === appointmentData.doctorId)?.availableSlots || [];
+          if (doctorSlots.length === 0) {
+            toast.info('No available slots for selected date');
+            return;
+          }
+
+          const availableTimeSlots = doctorSlots.map(slot => slot.startTime);
+          console.log('Available time slots:', availableTimeSlots);
+
+          const selectedTreatment = treatments.find(t => t._id === appointmentData.treatmentId);
+          if (!selectedTreatment) {
+            console.error('Selected treatment not found');
+            toast.error('Please select a valid treatment');
+            return;
+          }
+
+          const treatmentDuration = selectedTreatment.duration;
+          console.log('Treatment duration:', treatmentDuration);
+          
+          const slots: string[] = [];
+          availableTimeSlots.forEach(slot => {
+            try {
+              const startTime = new Date(slot);
+              const endTime = new Date(startTime.getTime() + treatmentDuration * 60000); // Convert minutes to milliseconds
+              slots.push(startTime.toISOString());
+            } catch (error) {
+              console.error('Error processing time slot:', error);
+            }
+          });
+          
+          console.log('Generated available time slots:', slots);
+          if (slots.length === 0) {
+            toast.info('No suitable time slots found for selected treatment duration');
+          }
+          setAppointmentData(prev => ({
+            ...prev,
+            startTime: slots[0],
+            endTime: new Date(new Date(slots[0]).getTime() + treatmentDuration * 60000).toISOString()
+          }));
         } catch (error) {
           console.error('Error fetching doctor availability:', error);
-          toast.error('Error fetching doctor availability');
+          toast.error('Error checking doctor availability. Please try again.');
         }
       }
     };
-    fetchDoctorAvailability();
-  }, [selectedDate]);
 
-  useEffect(() => {
-    const checkAvailability = async () => {
-      if (appointmentData.doctorId && appointmentData.startTime) {
-        setIsCheckingAvailability(true);
-        try {
-          const slots = await appointmentService.getAvailableSlots(
-            appointmentData.doctorId,
-            format(new Date(appointmentData.startTime), 'yyyy-MM-dd')
-          );
-          setAvailableSlots(slots);
-        } catch (error) {
-          console.error('Error checking availability:', error);
-          toast.error('Error checking doctor availability');
-        } finally {
-          setIsCheckingAvailability(false);
-        }
-      }
-    };
-    checkAvailability();
-  }, [appointmentData.doctorId, appointmentData.startTime]);
+    fetchDoctorAvailability();
+  }, [selectedDate, appointmentData.doctorId, treatments]);
 
   useEffect(() => {
     const checkConflicts = async () => {
-      if (
-        appointmentData.doctorId &&
-        appointmentData.roomId &&
-        appointmentData.startTime &&
-        appointmentData.endTime &&
-        (patientType === 'existing' ? selectedPatientId : true)
-      ) {
-        setIsCheckingConflicts(true);
-        try {
+      try {
+        if (
+          appointmentData.doctorId &&
+          appointmentData.roomId &&
+          appointmentData.startTime &&
+          appointmentData.endTime &&
+          (patientType === 'existing' ? selectedPatient?._id : true)
+        ) {
           const conflicts = await appointmentService.checkForConflicts(
             appointmentData.doctorId,
             appointmentData.roomId,
-            patientType === 'existing' ? selectedPatientId : '',
+            patientType === 'existing' ? selectedPatient?._id : '',
             appointmentData.startTime,
             appointmentData.endTime
           );
-          setConflicts(conflicts);
-        } catch (error) {
-          console.error('Error checking conflicts:', error);
-          toast.error('Error checking appointment conflicts');
-        } finally {
-          setIsCheckingConflicts(false);
+          if (conflicts.length > 0) {
+            toast.error('Time slot conflicts detected');
+          }
         }
-      } else {
-        setConflicts([]);
+      } catch (error) {
+        console.error('Error checking conflicts:', error);
       }
     };
     checkConflicts();
@@ -203,69 +274,22 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
     appointmentData.roomId,
     appointmentData.startTime,
     appointmentData.endTime,
-    selectedPatientId,
+    selectedPatient,
     patientType
   ]);
 
   useEffect(() => {
-    if (appointmentData.doctorId && selectedDate) {
-      const doctorSlots = doctorAvailability[appointmentData.doctorId] || [];
-      const slots: string[] = [];
-      
-      // Get selected treatment duration
-      const selectedTreatment = treatments.find(t => t._id === appointmentData.treatmentId);
-      const treatmentDuration = selectedTreatment?.duration || 30; // default to 30 minutes if no treatment selected
-      
-      doctorSlots.forEach(slot => {
-        const start = new Date(slot.startTime);
-        const end = new Date(slot.endTime);
-        
-        // Check if this slot is long enough for the treatment
-        const slotDuration = (end.getTime() - start.getTime()) / (1000 * 60); // convert to minutes
-        
-        if (slotDuration >= treatmentDuration) {
-          // Generate slots until there's not enough time left for the treatment
-          while (start.getTime() + treatmentDuration * 60 * 1000 <= end.getTime()) {
-            slots.push(start.toISOString());
-            start.setMinutes(start.getMinutes() + 30);
-          }
-        }
-      });
-      
-      setAvailableTimeSlots(slots);
-    } else {
-      setAvailableTimeSlots([]);
-    }
-  }, [appointmentData.doctorId, appointmentData.treatmentId, selectedDate, doctorAvailability, treatments]);
-
-  useEffect(() => {
-    const fetchAvailableResources = async () => {
+    const clearDoctorAndRoomSelection = () => {
       if (appointmentData.treatmentId) {
-        try {
-          const [doctors, rooms] = await Promise.all([
-            appointmentService.getAvailableDoctorsForTreatment(appointmentData.treatmentId),
-            appointmentService.getAvailableRoomsForTreatment(appointmentData.treatmentId)
-          ]);
-          setAvailableDoctors(doctors);
-          setAvailableRooms(rooms);
-          
-          // Clear selected doctor and room if they're not available for this treatment
-          if (!doctors.find(d => d._id === appointmentData.doctorId)) {
-            setAppointmentData(prev => ({ ...prev, doctorId: '' }));
-          }
-          if (!rooms.find(r => r._id === appointmentData.roomId)) {
-            setAppointmentData(prev => ({ ...prev, roomId: '' }));
-          }
-        } catch (error) {
-          console.error('Error fetching available resources:', error);
-          toast.error('Error fetching available doctors and rooms');
-        }
-      } else {
-        setAvailableDoctors([]);
-        setAvailableRooms([]);
+        setAppointmentData(prev => ({
+          ...prev,
+          doctorId: '',
+          roomId: ''
+        }));
       }
     };
-    fetchAvailableResources();
+
+    clearDoctorAndRoomSelection();
   }, [appointmentData.treatmentId]);
 
   const handleAppointmentDataChange = (field: keyof AppointmentFormData, value: any) => {
@@ -344,12 +368,25 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
     const newErrors: Record<string, string> = {};
 
     // Check for scheduling conflicts
-    if (conflicts.length > 0) {
-      newErrors.general = 'Cannot create appointment due to scheduling conflicts';
+    if (appointmentData.doctorId && appointmentData.roomId && appointmentData.startTime && appointmentData.endTime) {
+      try {
+        const conflicts = appointmentService.checkForConflicts(
+          appointmentData.doctorId,
+          appointmentData.roomId,
+          patientType === 'existing' ? selectedPatient?._id : '',
+          appointmentData.startTime,
+          appointmentData.endTime
+        );
+        if (conflicts.length > 0) {
+          newErrors.general = 'Cannot create appointment due to scheduling conflicts';
+        }
+      } catch (error) {
+        console.error('Error checking conflicts:', error);
+      }
     }
 
-    if (patientType === 'existing' && !selectedPatientId) {
-      newErrors.patient = 'Please select a patient';
+    if (patientType === 'existing' && !selectedPatient?._id) {
+      newErrors.patientId = 'Please select a patient';
     }
 
     if (!appointmentData.doctorId) {
@@ -389,90 +426,161 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async () => {
-    if (!validateForm()) {
-      toast.error('Please fix the errors before submitting');
-      return;
-    }
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    setLoading(true);
+  const handleSubmit = async () => {
     try {
-      const submitData = {
-        ...(patientType === 'existing' ? { patientId: selectedPatientId } : { newPatient: newPatientData }),
-        appointment: appointmentData,
+      setIsSubmitting(true);
+
+      // Get the treatment price
+      const selectedTreatment = treatments.find(t => t._id === appointmentData.treatmentId);
+      if (!selectedTreatment) {
+        throw new Error('Selected treatment not found');
+      }
+
+      console.log('Selected treatment:', selectedTreatment);
+
+      const appointmentDataWithPrice = {
+        ...appointmentData,
+        price: selectedTreatment.price,
+        status: AppointmentStatus.BOOKED,
+        paymentStatus: PaymentStatus.UNPAID
       };
 
-      await appointmentService.createAppointment(submitData);
+      console.log('Appointment data with price:', appointmentDataWithPrice);
+
+      const createData = patientType === 'existing'
+        ? {
+            patientId: selectedPatient?._id,
+            appointment: appointmentDataWithPrice
+          }
+        : {
+            newPatient: newPatientData,
+            appointment: appointmentDataWithPrice
+          };
+
+      console.log('Final create data:', createData);
+
+      await appointmentService.createAppointment(createData);
       toast.success('Appointment created successfully');
       onSuccess?.();
       onClose();
     } catch (error) {
-      toast.error('Error creating appointment');
-      console.error('Error:', error);
+      console.error('Error creating appointment:', error);
+      toast.error('Failed to create appointment');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
+  const handleSearchChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value;
+    setPatientSearchInput(query);
+    
+    if (query.trim()) {
+      try {
+        const results = await appointmentService.searchPatients(query);
+        setPatients(results);
+      } catch (error) {
+        console.error('Error searching patients:', error);
+        toast.error('Error searching for patients');
+      }
+    } else {
+      setPatients([]);
+    }
+  };
+
+  const handlePatientSelect = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setPatientSearchInput(`${patient.firstName} ${patient.lastName}`);
+    setPatients([]);
+  };
+
+  useEffect(() => {
+    if (patientType === 'new') {
+      setSelectedPatient(null);
+      setPatientSearchInput('');
+      setPatients([]);
+    }
+  }, [patientType]);
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Create New Appointment</DialogTitle>
-      <DialogContent>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: { minHeight: '80vh' }
+      }}
+    >
+      <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider', pb: 2 }}>
+        Create New Appointment
+      </DialogTitle>
+      <DialogContent sx={{ p: 3 }}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
               Patient Information
             </Typography>
             <FormControl component="fieldset">
+              <FormLabel component="legend">Patient Type</FormLabel>
               <RadioGroup
                 row
                 value={patientType}
                 onChange={(e) => setPatientType(e.target.value as 'new' | 'existing')}
               >
-                <FormControlLabel value="existing" control={<Radio />} label="Existing Patient" />
-                <FormControlLabel value="new" control={<Radio />} label="New Patient" />
+                <FormControlLabel
+                  value="existing"
+                  control={<Radio />}
+                  label="Existing Patient"
+                />
+                <FormControlLabel
+                  value="new"
+                  control={<Radio />}
+                  label="New Patient"
+                />
               </RadioGroup>
             </FormControl>
           </Grid>
 
           {patientType === 'existing' && (
             <Grid item xs={12}>
-              <Autocomplete
-                value={patients.find(p => p._id === selectedPatientId) || null}
-                onChange={(_, newValue) => {
-                  setSelectedPatientId(newValue?._id || '');
-                }}
-                onInputChange={(_, newInputValue) => {
-                  setPatientSearchInput(newInputValue);
-                }}
-                inputValue={patientSearchInput}
-                options={patients}
-                getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Search Patient"
-                    error={!!errors.patient}
-                    helperText={errors.patient}
-                    fullWidth
-                  />
-                )}
-                renderOption={(props, option) => (
-                  <Box component="li" {...props}>
-                    <Box>
-                      <Typography variant="body1">
-                        {option.firstName} {option.lastName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {option.email} • {option.phoneNumber}
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
-                loading={loading}
-                loadingText="Searching..."
-                noOptionsText={patientSearchInput ? "No patients found" : "Type to search"}
+              <TextField
+                fullWidth
+                label="Search Patients"
+                value={patientSearchInput}
+                onChange={handleSearchChange}
               />
+              {patients.length > 0 && (
+                <Paper sx={{ mt: 1, maxHeight: 200, overflow: 'auto', width: '100%' }}>
+                  <List>
+                    {patients.map((patient) => (
+                      <ListItem
+                        key={patient._id}
+                        button
+                        onClick={() => handlePatientSelect(patient)}
+                      >
+                        <ListItemText
+                          primary={`${patient.firstName} ${patient.lastName}`}
+                          secondary={`${patient.email} • ${patient.phoneNumber}`}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Paper>
+              )}
+              {selectedPatient && (
+                <Box sx={{ mt: 1, p: 1, bgcolor: 'background.paper', borderRadius: 1, width: '100%' }}>
+                  <Typography variant="subtitle2">Selected Patient:</Typography>
+                  <Typography>
+                    {selectedPatient.firstName} {selectedPatient.lastName}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedPatient.email} • {selectedPatient.phoneNumber}
+                  </Typography>
+                </Box>
+              )}
             </Grid>
           )}
           {patientType === 'new' && (
@@ -483,8 +591,6 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                   label="First Name"
                   value={newPatientData.firstName}
                   onChange={(e) => handleNewPatientDataChange('firstName', e.target.value)}
-                  error={!!errors.firstName}
-                  helperText={errors.firstName}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -493,8 +599,6 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                   label="Last Name"
                   value={newPatientData.lastName}
                   onChange={(e) => handleNewPatientDataChange('lastName', e.target.value)}
-                  error={!!errors.lastName}
-                  helperText={errors.lastName}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -504,8 +608,6 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                   type="email"
                   value={newPatientData.email}
                   onChange={(e) => handleNewPatientDataChange('email', e.target.value)}
-                  error={!!errors.email}
-                  helperText={errors.email}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -514,8 +616,6 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                   label="Phone Number"
                   value={newPatientData.phoneNumber}
                   onChange={(e) => handleNewPatientDataChange('phoneNumber', e.target.value)}
-                  error={!!errors.phoneNumber}
-                  helperText={errors.phoneNumber}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -574,156 +674,121 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
             </Typography>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12}>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 label="Select Date"
                 value={selectedDate}
-                onChange={handleDateSelection}
+                onChange={(newValue) => {
+                  setSelectedDate(newValue);
+                  setAppointmentData(prev => ({
+                    ...prev,
+                    startTime: '',
+                    endTime: ''
+                  }));
+                }}
+                disabled={loading}
                 slotProps={{
                   textField: {
-                    fullWidth: true
+                    fullWidth: true,
+                    error: !!errors.date,
+                    helperText: errors.date
                   }
                 }}
               />
             </LocalizationProvider>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12}>
             <FormControl fullWidth>
               <InputLabel>Treatment</InputLabel>
               <Select
                 value={appointmentData.treatmentId}
                 onChange={(e) => handleAppointmentDataChange('treatmentId', e.target.value)}
                 label="Treatment"
-                error={!!errors.treatmentId}
+                disabled={loading}
               >
                 {treatments.map((treatment) => (
                   <MenuItem key={treatment._id} value={treatment._id}>
                     <Box>
-                      <Typography variant="body1">
-                        {treatment.name}
-                      </Typography>
+                      <Typography>{treatment.name}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {treatment.duration} min - ${treatment.price}
+                        Duration: {treatment.duration} min | Price: ${treatment.price}
                       </Typography>
                     </Box>
                   </MenuItem>
                 ))}
               </Select>
-              {errors.treatmentId && (
-                <FormHelperText error>{errors.treatmentId}</FormHelperText>
-              )}
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} md={6}>
             <FormControl fullWidth>
               <InputLabel>Doctor</InputLabel>
               <Select
                 value={appointmentData.doctorId}
                 onChange={(e) => handleAppointmentDataChange('doctorId', e.target.value)}
                 label="Doctor"
-                error={!!errors.doctorId}
-                disabled={!appointmentData.treatmentId}
+                disabled={!appointmentData.treatmentId || loading}
               >
-                {availableDoctors.map((doctor) => {
-                  const hasAvailability = selectedDate ? 
-                    (doctorAvailability[doctor._id]?.length ?? 0) > 0 : true;
-                  
-                  return (
-                    <MenuItem 
-                      key={doctor._id} 
-                      value={doctor._id}
-                      disabled={!hasAvailability}
-                      sx={!hasAvailability ? { opacity: 0.5 } : undefined}
-                    >
-                      <Box>
-                        <Typography variant="body1">
-                          Dr. {doctor.firstName} {doctor.lastName}
-                        </Typography>
-                        {!hasAvailability && selectedDate && (
-                          <Typography variant="caption" color="text.secondary">
-                            No availability on {format(selectedDate, 'PP')}
-                          </Typography>
-                        )}
-                      </Box>
-                    </MenuItem>
-                  );
-                })}
+                {doctors?.map((doctor) => (
+                  <MenuItem 
+                    key={doctor._id} 
+                    value={doctor._id}
+                    disabled={!availableDoctors.some(d => d._id === doctor._id)}
+                  >
+                    <Box>
+                      <Typography>
+                        Dr. {doctor.firstName} {doctor.lastName}
+                        {!availableDoctors.some(d => d._id === doctor._id) && ' (Not available)'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {doctor.specializations?.map(s => s.name).join(', ')}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
               </Select>
-              {errors.doctorId && (
-                <FormHelperText error>{errors.doctorId}</FormHelperText>
-              )}
-              {!appointmentData.treatmentId && (
-                <FormHelperText>Please select a treatment first</FormHelperText>
-              )}
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} md={6}>
             <FormControl fullWidth>
               <InputLabel>Room</InputLabel>
               <Select
                 value={appointmentData.roomId}
                 onChange={(e) => handleAppointmentDataChange('roomId', e.target.value)}
                 label="Room"
-                error={!!errors.roomId}
-                disabled={!appointmentData.treatmentId}
+                disabled={!appointmentData.treatmentId || loading}
               >
-                {availableRooms.map((room) => (
-                  <MenuItem key={room._id} value={room._id}>
+                {rooms?.map((room) => (
+                  <MenuItem 
+                    key={room._id} 
+                    value={room._id}
+                    disabled={!availableRooms.some(r => r._id === room._id)}
+                  >
                     <Box>
-                      <Typography variant="body1">
+                      <Typography>
                         {room.name}
+                        {!availableRooms.some(r => r._id === room._id) && ' (Not available)'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {room.description}
+                        {room.specializations?.map(s => s.name).join(', ')}
                       </Typography>
                     </Box>
                   </MenuItem>
                 ))}
               </Select>
-              {errors.roomId && (
-                <FormHelperText error>{errors.roomId}</FormHelperText>
-              )}
-              {!appointmentData.treatmentId && (
-                <FormHelperText>Please select a treatment first</FormHelperText>
-              )}
             </FormControl>
           </Grid>
 
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth>
-              <InputLabel>Available Time Slots</InputLabel>
-              <Select
-                value={appointmentData.startTime}
-                onChange={(e) => handleAppointmentDataChange('startTime', e.target.value)}
-                label="Available Time Slots"
-                error={!!errors.startTime}
-                disabled={!selectedDate || !appointmentData.doctorId || !appointmentData.treatmentId}
-              >
-                {availableTimeSlots.map((slot) => {
-                  const startTime = new Date(slot);
-                  const selectedTreatment = treatments.find(t => t._id === appointmentData.treatmentId);
-                  const endTime = new Date(startTime.getTime() + (selectedTreatment?.duration || 30) * 60 * 1000);
-                  
-                  return (
-                    <MenuItem key={slot} value={slot}>
-                      {format(startTime, 'p')} - {format(endTime, 'p')} ({selectedTreatment?.duration || 30} min)
-                    </MenuItem>
-                  );
-                })}
-              </Select>
-              {errors.startTime && (
-                <FormHelperText error>{errors.startTime}</FormHelperText>
-              )}
-              {(!selectedDate || !appointmentData.doctorId || !appointmentData.treatmentId) && (
-                <FormHelperText>
-                  Please select a date, doctor, and treatment to see available time slots
-                </FormHelperText>
-              )}
-            </FormControl>
+            <TextField
+              fullWidth
+              label="Start Time"
+              value={appointmentData.startTime ? format(new Date(appointmentData.startTime), 'PPpp') : ''}
+              disabled
+            />
           </Grid>
 
           <Grid item xs={12} sm={6}>
@@ -761,67 +826,87 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
             />
           </Grid>
 
-          {(isCheckingConflicts || conflicts.length > 0) && (
+          {selectedPatient && appointmentData.treatmentId && appointmentData.startTime && (
             <Grid item xs={12}>
-              <Paper 
-                sx={{ 
-                  p: 2, 
-                  bgcolor: conflicts.length > 0 ? 'error.light' : 'background.default',
-                  color: conflicts.length > 0 ? 'error.contrastText' : 'text.primary'
-                }}
-              >
-                {isCheckingConflicts ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <CircularProgress size={20} sx={{ mr: 1 }} />
-                    <Typography>Checking for conflicts...</Typography>
-                  </Box>
-                ) : conflicts.length > 0 ? (
-                  <>
-                    <Typography variant="h6" gutterBottom>
-                      Scheduling Conflicts Detected
-                    </Typography>
-                    {conflicts.map((conflict, index) => (
-                      <Box key={index} sx={{ mt: 1 }}>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                          {conflict.message}
-                        </Typography>
-                        <Typography variant="body2">
-                          Time: {format(new Date(conflict.conflictingAppointment.startTime), 'PPpp')} - 
-                          {format(new Date(conflict.conflictingAppointment.endTime), 'pp')}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </>
-                ) : null}
-              </Paper>
-            </Grid>
-          )}
-
-          {selectedPatientId && appointmentData.treatmentId && appointmentData.startTime && (
-            <Grid item xs={12}>
-              <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+              <Paper sx={{ p: 2, bgcolor: 'background.paper', width: '100%' }}>
                 <Typography variant="h6" gutterBottom>
                   Appointment Summary
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="textSecondary">
-                      Patient: {patients.find(p => p._id === selectedPatientId)?.firstName} {patients.find(p => p._id === selectedPatientId)?.lastName}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Treatment: {treatments.find(t => t._id === appointmentData.treatmentId)?.name}
-                    </Typography>
+                    <Typography variant="subtitle2">Patient</Typography>
+                    {patientType === 'existing' && selectedPatient ? (
+                      <>
+                        <Typography>
+                          {selectedPatient.firstName} {selectedPatient.lastName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {selectedPatient.email} • {selectedPatient.phoneNumber}
+                        </Typography>
+                      </>
+                    ) : patientType === 'new' ? (
+                      <>
+                        <Typography>
+                          {newPatientData.firstName} {newPatientData.lastName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {newPatientData.email} • {newPatientData.phoneNumber}
+                        </Typography>
+                      </>
+                    ) : (
+                      <Typography color="text.secondary">No patient selected</Typography>
+                    )}
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="textSecondary">
-                      Start: {appointmentData.startTime ? format(new Date(appointmentData.startTime), 'PPpp') : ''}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      End: {appointmentData.endTime ? format(new Date(appointmentData.endTime), 'PPpp') : ''}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Duration: {treatments.find(t => t._id === appointmentData.treatmentId)?.duration} minutes
-                    </Typography>
+                    <Typography variant="subtitle2">Doctor</Typography>
+                    {appointmentData.doctorId ? (
+                      <Typography>
+                        {doctors.find(d => d._id === appointmentData.doctorId)?.firstName}{' '}
+                        {doctors.find(d => d._id === appointmentData.doctorId)?.lastName}
+                      </Typography>
+                    ) : (
+                      <Typography color="text.secondary">No doctor selected</Typography>
+                    )}
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle2">Treatment</Typography>
+                    {appointmentData.treatmentId ? (
+                      <>
+                        <Typography>
+                          {treatments.find(t => t._id === appointmentData.treatmentId)?.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Duration: {treatments.find(t => t._id === appointmentData.treatmentId)?.duration} minutes
+                        </Typography>
+                      </>
+                    ) : (
+                      <Typography color="text.secondary">No treatment selected</Typography>
+                    )}
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle2">Room</Typography>
+                    {appointmentData.roomId ? (
+                      <Typography>
+                        {rooms.find(r => r._id === appointmentData.roomId)?.name}
+                      </Typography>
+                    ) : (
+                      <Typography color="text.secondary">No room selected</Typography>
+                    )}
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle2">Date & Time</Typography>
+                    {appointmentData.startTime ? (
+                      <>
+                        <Typography>
+                          {format(new Date(appointmentData.startTime), 'PPP')}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {format(new Date(appointmentData.startTime), 'p')} - {format(new Date(appointmentData.endTime), 'p')}
+                        </Typography>
+                      </>
+                    ) : (
+                      <Typography color="text.secondary">No time selected</Typography>
+                    )}
                   </Grid>
                 </Grid>
               </Paper>
@@ -829,14 +914,15 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
           )}
         </Grid>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
         <Button onClick={onClose}>Cancel</Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={isCheckingConflicts || conflicts.length > 0 || loading}
+        <Button 
+          onClick={handleSubmit} 
+          variant="contained" 
+          disabled={isSubmitting}
+          startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
         >
-          {loading ? 'Creating...' : 'Create Appointment'}
+          Create Appointment
         </Button>
       </DialogActions>
     </Dialog>

@@ -9,6 +9,7 @@ const router = express.Router();
 router.use(authenticate);
 
 // Routes accessible by all authenticated users
+router.get('/search', PatientController.searchPatients);
 router.get('/', PatientController.getAllPatients);
 router.get('/:id', PatientController.getPatientById);
 

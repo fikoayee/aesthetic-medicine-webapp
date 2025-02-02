@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database';
 import { logger } from './config/logger';
-import { errorHandler, ApiError, ValidationError } from './middleware/error.middleware';
+import { errorHandler } from './middleware/error.middleware';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import patientRoutes from './routes/patient.routes';
@@ -30,31 +30,6 @@ app.use(cors({
 app.use(helmet());
 app.use(express.json());
 
-// Test routes for error handling
-app.get('/test/error/api', (req, res, next) => {
-  throw new ApiError(400, 'Test API error');
-});
-
-app.get('/test/error/validation', (req, res, next) => {
-  throw new ValidationError('Test validation error', {
-    email: 'Invalid email format',
-    password: 'Password too short'
-  });
-});
-
-app.get('/test/error/unhandled', (req, res, next) => {
-  throw new Error('Test unhandled error');
-});
-
-app.get('/test/error/async', async (req, res, next) => {
-  try {
-    // Simulate async operation that fails
-    await Promise.reject(new Error('Test async error'));
-  } catch (error) {
-    next(error);
-  }
-});
-
 // Routes
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
@@ -70,7 +45,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'aesthetic-clinic-api' });
 });
 
-// Global error handler - should be last
+// Global error handler
 app.use(errorHandler);
 
 // Start server

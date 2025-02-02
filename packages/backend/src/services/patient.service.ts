@@ -20,6 +20,22 @@ export class PatientService {
     }
   }
 
+  static async searchPatients(query: string): Promise<IPatient[]> {
+    try {
+      return await Patient.find({
+        $or: [
+          { firstName: { $regex: query, $options: 'i' } },
+          { lastName: { $regex: query, $options: 'i' } },
+          { email: { $regex: query, $options: 'i' } },
+          { phoneNumber: { $regex: query, $options: 'i' } }
+        ]
+      });
+    } catch (error) {
+      logger.error('Search patients service error:', error);
+      throw error;
+    }
+  }
+
   static async createPatient(patientData: Partial<IPatient>): Promise<IPatient> {
     try {
       const patient = new Patient(patientData);

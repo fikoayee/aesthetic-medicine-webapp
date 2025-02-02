@@ -65,6 +65,9 @@ export class AppointmentService {
     startTime: Date;
     endTime: Date;
     note?: string;
+    price: number;
+    status?: AppointmentStatus;
+    paymentStatus?: PaymentStatus;
   }): Promise<IAppointment> {
     try {
       // Check if doctor exists and get their working hours
@@ -87,12 +90,14 @@ export class AppointmentService {
       );
 
       // Check for conflicting appointments
-      await this.checkForConflicts(
+      if (await this.checkForConflicts(
         appointmentData.doctorId,
         appointmentData.roomId,
         appointmentData.startTime,
         appointmentData.endTime
-      );
+      )) {
+        throw new ApiError(409, 'Doctor or room has a conflicting appointment');
+      }
 
       const appointment = new Appointment({
         doctor: new mongoose.Types.ObjectId(appointmentData.doctorId),
@@ -102,8 +107,9 @@ export class AppointmentService {
         startTime: appointmentData.startTime,
         endTime: appointmentData.endTime,
         note: appointmentData.note,
-        status: AppointmentStatus.BOOKED,
-        paymentStatus: PaymentStatus.UNPAID
+        price: appointmentData.price,
+        status: appointmentData.status || AppointmentStatus.BOOKED,
+        paymentStatus: appointmentData.paymentStatus || PaymentStatus.UNPAID
       });
 
       await appointment.save();
@@ -163,42 +169,45 @@ export class AppointmentService {
     }
   }
 
-  private static async checkForConflicts(
+  static async checkForConflicts(
     doctorId: string,
     roomId: string,
     startTime: Date,
     endTime: Date
-  ): Promise<void> {
-    // Check for doctor's conflicting appointments
-    const doctorConflict = await Appointment.findOne({
-      doctor: new mongoose.Types.ObjectId(doctorId),
-      status: { $ne: AppointmentStatus.CANCELED },
-      $or: [
-        {
-          startTime: { $lt: endTime },
-          endTime: { $gt: startTime }
-        }
-      ]
-    });
+  ): Promise<boolean> {
+    try {
+      // Check for doctor's conflicting appointments
+      const doctorConflict = await Appointment.findOne({
+        doctor: new mongoose.Types.ObjectId(doctorId),
+        status: { $ne: AppointmentStatus.CANCELED },
+        $or: [
+          {
+            startTime: { $lt: endTime },
+            endTime: { $gt: startTime }
+          }
+        ]
+      });
 
-    if (doctorConflict) {
-      throw new ApiError(409, 'Doctor has a conflicting appointment');
-    }
+      if (doctorConflict) {
+        return true;
+      }
 
-    // Check for room's conflicting appointments
-    const roomConflict = await Appointment.findOne({
-      room: new mongoose.Types.ObjectId(roomId),
-      status: { $ne: AppointmentStatus.CANCELED },
-      $or: [
-        {
-          startTime: { $lt: endTime },
-          endTime: { $gt: startTime }
-        }
-      ]
-    });
+      // Check for room's conflicting appointments
+      const roomConflict = await Appointment.findOne({
+        room: new mongoose.Types.ObjectId(roomId),
+        status: { $ne: AppointmentStatus.CANCELED },
+        $or: [
+          {
+            startTime: { $lt: endTime },
+            endTime: { $gt: startTime }
+          }
+        ]
+      });
 
-    if (roomConflict) {
-      throw new ApiError(409, 'Room is already booked for this time');
+      return !!roomConflict;
+    } catch (error) {
+      logger.error('Check for conflicts error:', error);
+      throw error;
     }
   }
 
@@ -248,12 +257,14 @@ export class AppointmentService {
         }
 
         await this.validateDoctorAvailability(doctor, startTime, endTime);
-        await this.checkForConflicts(
+        if (await this.checkForConflicts(
           appointment.doctor.toString(),
           appointment.room.toString(),
           startTime,
           endTime
-        );
+        )) {
+          throw new ApiError(409, 'Doctor or room has a conflicting appointment');
+        }
       }
 
       Object.assign(appointment, updateData);

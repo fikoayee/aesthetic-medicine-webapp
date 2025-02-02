@@ -19,6 +19,30 @@ export class PatientController {
     }
   }
 
+  static async searchPatients(req: Request, res: Response) {
+    try {
+      const { query } = req.query;
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Search query is required'
+        });
+      }
+
+      const patients = await PatientService.searchPatients(query);
+      return res.status(200).json({
+        status: 'success',
+        data: { patients }
+      });
+    } catch (error) {
+      logger.error('Search patients error:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Failed to search patients'
+      });
+    }
+  }
+
   static async getPatientById(req: Request, res: Response) {
     try {
       const { id } = req.params;

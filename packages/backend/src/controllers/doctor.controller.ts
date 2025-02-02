@@ -5,16 +5,55 @@ import { logger } from '../config/logger';
 export class DoctorController {
   static async getAllDoctors(req: Request, res: Response) {
     try {
-      const doctors = await DoctorService.getAllDoctors();
+      const doctors = await DoctorService.getAllDoctors({ populate: { path: 'specializations' } });
       return res.status(200).json({
         status: 'success',
-        data: { doctors }
+        data: doctors
       });
     } catch (error) {
-      logger.error('Get all doctors error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to get doctors'
+      });
+    }
+  }
+
+  static async getDoctorAvailability(req: Request, res: Response) {
+    try {
+      const { date } = req.query;
+      logger.info('Getting availability for date:', date);
+      
+      if (!date || typeof date !== 'string') {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Date is required'
+        });
+      }
+
+      const doctors = await DoctorService.getAllDoctors();
+      logger.info('Found doctors:', doctors.length);
+
+      const availability = await Promise.all(
+        doctors.map(async (doctor) => {
+          const slots = await DoctorService.getDoctorAvailability(doctor._id.toString(), date);
+          logger.info(`Doctor ${doctor._id} availability:`, slots);
+          return {
+            doctorId: doctor._id,
+            availableSlots: slots
+          };
+        })
+      );
+
+      logger.info('Final availability:', availability);
+      return res.status(200).json({
+        status: 'success',
+        data: { availability }
+      });
+    } catch (error) {
+      logger.error('Error getting doctor availability:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Failed to get doctor availability'
       });
     }
   }
@@ -36,7 +75,6 @@ export class DoctorController {
         data: { doctor }
       });
     } catch (error) {
-      logger.error('Get doctor by id error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to get doctor'
@@ -59,7 +97,6 @@ export class DoctorController {
         data: { doctor }
       });
     } catch (error) {
-      logger.error('Create doctor error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to create doctor'
@@ -93,7 +130,6 @@ export class DoctorController {
         data: { doctor }
       });
     } catch (error) {
-      logger.error('Update doctor error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to update doctor'
@@ -125,10 +161,49 @@ export class DoctorController {
         message: 'Doctor deleted successfully'
       });
     } catch (error) {
-      logger.error('Delete doctor error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to delete doctor'
+      });
+    }
+  }
+
+  static async getAvailableDoctorsForTreatment(req: Request, res: Response) {
+    try {
+      const { treatmentId } = req.query;
+      logger.info(`Getting available doctors for treatment: ${treatmentId}`);
+      
+      if (!treatmentId || typeof treatmentId !== 'string') {
+        logger.error('Invalid or missing treatmentId:', treatmentId);
+        return res.status(400).json({
+          status: 'error',
+          message: 'Treatment ID is required'
+        });
+      }
+
+      const doctors = await DoctorService.getDoctorsByTreatment(treatmentId);
+      logger.info(`Found ${doctors.length} doctors for treatment ${treatmentId}`);
+      
+      if (doctors.length === 0) {
+        logger.info('No doctors found, checking treatment and specialization...');
+        const { Treatment } = await import('../models/Treatment');
+        const treatment = await Treatment.findById(treatmentId);
+        logger.info(`Treatment details:`, {
+          exists: !!treatment,
+          name: treatment?.name,
+          specializationId: treatment?.specialization
+        });
+      }
+
+      return res.status(200).json({
+        status: 'success',
+        data: { doctors }
+      });
+    } catch (error) {
+      logger.error('Error getting available doctors:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Failed to get available doctors'
       });
     }
   }

@@ -8,7 +8,8 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "lint": "eslint . --ext .ts",
-    "seed": "ts-node scripts/seed.ts"
+    "seed": "ts-node scripts/seed.ts",
+    "setup-test-user": "ts-node src/config/setupTestUser.ts"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

@@ -1,22 +1,21 @@
 import express from 'express';
 import { DoctorController } from '../controllers/doctor.controller';
-import { authenticate, authorize } from '../middleware/auth';
-import { UserRole } from '../models/User';
+import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
 
-// Routes accessible by all authenticated users
+// More specific routes first
+router.get('/by-treatment', DoctorController.getAvailableDoctorsForTreatment);
+router.get('/get-availability', DoctorController.getDoctorAvailability);
+
+// Generic CRUD routes
 router.get('/', DoctorController.getAllDoctors);
 router.get('/:id', DoctorController.getDoctorById);
-
-// Routes that require ADMIN role
-router.post('/', authorize(UserRole.ADMIN), DoctorController.createDoctor);
-router.delete('/:id', authorize(UserRole.ADMIN), DoctorController.deleteDoctor);
-
-// Route accessible by ADMIN or the doctor themselves
-router.put('/:id', authenticate, DoctorController.updateDoctor);
+router.post('/', DoctorController.createDoctor);
+router.put('/:id', DoctorController.updateDoctor);
+router.delete('/:id', DoctorController.deleteDoctor);
 
 export default router;

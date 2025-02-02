@@ -3,6 +3,7 @@ import { Room } from '../models/Room';
 import { Specialization } from '../models/Specialization';
 import { Treatment } from '../models/Treatment';
 import { logger } from '../config/logger';
+import { RoomService } from '../services/room.service';
 
 export class RoomController {
   static async getAllRooms(req: Request, res: Response) {
@@ -19,12 +20,9 @@ export class RoomController {
       
       return res.status(200).json({
         status: 'success',
-        data: {
-          rooms
-        }
+        data: { rooms }
       });
     } catch (error) {
-      logger.error('Get all rooms error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to get rooms'
@@ -58,7 +56,6 @@ export class RoomController {
         }
       });
     } catch (error) {
-      logger.error('Get room by id error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to get room'
@@ -93,7 +90,6 @@ export class RoomController {
         }
       });
     } catch (error) {
-      logger.error('Create room error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to create room'
@@ -138,7 +134,6 @@ export class RoomController {
         }
       });
     } catch (error) {
-      logger.error('Update room error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to update room'
@@ -169,10 +164,33 @@ export class RoomController {
         message: 'Room deleted successfully'
       });
     } catch (error) {
-      logger.error('Delete room error:', error);
       return res.status(500).json({
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to delete room'
+      });
+    }
+  }
+
+  static async getAvailableRoomsForTreatment(req: Request, res: Response) {
+    try {
+      const { treatmentId } = req.query;
+      
+      if (!treatmentId || typeof treatmentId !== 'string') {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Treatment ID is required'
+        });
+      }
+
+      const rooms = await RoomService.getRoomsByTreatment(treatmentId);
+      return res.status(200).json({
+        status: 'success',
+        data: { rooms }
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Failed to get available rooms'
       });
     }
   }

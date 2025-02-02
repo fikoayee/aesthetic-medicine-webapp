@@ -8,10 +8,15 @@ const router = express.Router();
 // All routes require authentication
 router.use(authenticate);
 
+// Get available slots (must be before /:id to prevent conflict)
+router.get('/available-slots', AppointmentController.getAvailableSlots);
+
+// Check for conflicts
+router.post('/check-conflicts', AppointmentController.checkForConflicts);
+
 // Basic appointment operations
 router.get('/', AppointmentController.getAllAppointments);
 router.get('/:id', AppointmentController.getAppointmentById);
-router.get('/available-slots', AppointmentController.getAvailableSlots);
 
 // Operations restricted to ADMIN and RECEPTIONIST
 router.post('/', authorize(UserRole.ADMIN, UserRole.RECEPTIONIST), AppointmentController.createAppointment);
