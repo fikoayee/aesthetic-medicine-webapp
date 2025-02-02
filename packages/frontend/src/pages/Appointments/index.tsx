@@ -7,7 +7,7 @@ import { alpha } from '@mui/material/styles';
 // Constants
 const START_HOUR = 8;  // 8 AM
 const END_HOUR = 20;   // 8 PM
-const SLOT_HEIGHT = 60; // 60px height for each hour slot
+const SLOT_HEIGHT = 120; // 120px height for each hour slot
 
 const ItemTypes = {
   APPOINTMENT: 'appointment'
@@ -17,29 +17,52 @@ const ROOMS = [
   { id: '1', name: 'Room 1' },
   { id: '2', name: 'Room 2' },
   { id: '3', name: 'Room 3' },
+  { id: '4', name: 'Room 4' },
+  { id: '5', name: 'Room 5' },
+  { id: '6', name: 'Room 6' },
 ];
 
 // Mock data
 const MOCK_APPOINTMENTS = [
   {
     id: '1',
-    patientName: 'John Doe',
-    treatmentName: 'Dental Cleaning',
-    doctorName: 'Dr. Smith',
-    startTime: '2025-02-02T10:00:00',
-    endTime: '2025-02-02T11:30:00',
+    patientName: 'Anna Smith',
+    treatmentName: 'Quick Checkup',
+    doctorName: 'Dr. Brown',
+    startTime: '2025-02-02T09:00:00',
+    endTime: '2025-02-02T09:15:00',  // 15 min
     roomId: '1',
     color: '#4CAF50'
   },
   {
     id: '2',
-    patientName: 'Jane Smith',
-    treatmentName: 'Consultation',
-    doctorName: 'Dr. Johnson',
-    startTime: '2025-02-02T14:00:00',
-    endTime: '2025-02-02T15:00:00',
+    patientName: 'John Doe',
+    treatmentName: 'Dental Cleaning',
+    doctorName: 'Dr. White',
+    startTime: '2025-02-02T10:00:00',
+    endTime: '2025-02-02T10:30:00',  // 30 min
     roomId: '2',
     color: '#2196F3'
+  },
+  {
+    id: '3',
+    patientName: 'Mary Johnson',
+    treatmentName: 'Root Canal',
+    doctorName: 'Dr. Green',
+    startTime: '2025-02-02T11:00:00',
+    endTime: '2025-02-02T11:45:00',  // 45 min
+    roomId: '3',
+    color: '#FF9800'
+  },
+  {
+    id: '4',
+    patientName: 'James Wilson',
+    treatmentName: 'Full Checkup',
+    doctorName: 'Dr. Black',
+    startTime: '2025-02-02T13:00:00',
+    endTime: '2025-02-02T14:00:00',  // 1 hour
+    roomId: '4',
+    color: '#9C27B0'
   }
 ];
 
@@ -327,9 +350,26 @@ const Appointments = () => {
 
   return (
     <Box p={3}>
-      <Paper sx={{ overflowX: 'auto' }}>
-        <Box sx={{ display: 'flex' }}>
-          {/* Time Column */}
+      <Paper 
+        sx={{ 
+          height: '80vh',
+          overflow: 'auto',
+          position: 'relative',
+          '& ::-webkit-scrollbar': {
+            width: 8,
+            height: 8,
+          },
+          '& ::-webkit-scrollbar-track': {
+            backgroundColor: '#f5f5f5',
+          },
+          '& ::-webkit-scrollbar-thumb': {
+            backgroundColor: '#bdbdbd',
+            borderRadius: 4,
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', minWidth: 'fit-content' }}>
+          {/* Time Column - Sticky on X axis */}
           <Box sx={{ 
             width: 80, 
             flexShrink: 0, 
@@ -338,9 +378,9 @@ const Appointments = () => {
             bgcolor: 'grey.100',
             position: 'sticky',
             left: 0,
-            zIndex: 2,
+            zIndex: 3,
           }}>
-            {/* Time Header */}
+            {/* Time Header - Sticky on both X and Y axes */}
             <Box sx={{ 
               height: 50, 
               borderBottom: 1, 
@@ -350,6 +390,9 @@ const Appointments = () => {
               justifyContent: 'center',
               fontWeight: 'bold',
               bgcolor: 'background.paper',
+              position: 'sticky',
+              top: 0,
+              zIndex: 4,
             }}>
               Time
             </Box>
@@ -385,7 +428,7 @@ const Appointments = () => {
                 position: 'relative',
               }}
             >
-              {/* Room Header */}
+              {/* Room Header - Sticky on Y axis */}
               <Box sx={{ 
                 height: 50, 
                 borderBottom: 1, 
@@ -394,7 +437,10 @@ const Appointments = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 'bold',
-                bgcolor: 'grey.100'
+                bgcolor: 'grey.100',
+                position: 'sticky',
+                top: 0,
+                zIndex: 2,
               }}>
                 {room.name}
               </Box>
