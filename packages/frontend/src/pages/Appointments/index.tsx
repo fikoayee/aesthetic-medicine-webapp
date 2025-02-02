@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Paper, Typography, Tooltip } from '@mui/material';
+import { Box, Paper, Typography, Tooltip, Button } from '@mui/material';
 import { format, parseISO } from 'date-fns';
 import { useDrag, useDrop } from 'react-dnd';
 import { alpha } from '@mui/material/styles';
+import { useNavigate } from 'react-router-dom';
+import AddIcon from '@mui/icons-material/Add';
+import AppointmentModal from '../../components/AppointmentModal';
 
 // Constants
 const START_HOUR = 8;  // 8 AM
@@ -319,13 +322,19 @@ const TimeSlot = ({
 
 const Appointments = () => {
   const [appointments, setAppointments] = useState(MOCK_APPOINTMENTS);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const handleAppointmentMove = (id: string, newRoomId: string, newHour: number, minutes: number = 0) => {
+  const handleCreateAppointment = () => {
+    navigate('/appointments/create');
+  };
+
+  const handleMoveAppointment = (id: string, roomId: string, hour: number, minutes: number) => {
     setAppointments(prevAppointments => {
       return prevAppointments.map(apt => {
         if (apt.id === id) {
           const startTime = new Date(apt.startTime);
-          startTime.setHours(newHour);
+          startTime.setHours(hour);
           startTime.setMinutes(minutes);
           
           const endTime = new Date(startTime);
@@ -334,7 +343,7 @@ const Appointments = () => {
           
           return {
             ...apt,
-            roomId: newRoomId,
+            roomId: roomId,
             startTime: startTime.toISOString(),
             endTime: endTime.toISOString()
           };
@@ -344,30 +353,31 @@ const Appointments = () => {
     });
   };
 
+  const handleModalSuccess = () => {
+    // Refresh appointments data
+    // For now using mock data, but in real app would fetch from API
+    setAppointments(MOCK_APPOINTMENTS);
+  };
+
   const timeSlots = Array.from({ length: END_HOUR - START_HOUR }, (_, index) => {
     return START_HOUR + index;
   });
 
   return (
-    <Box p={3}>
-      <Paper 
-        sx={{ 
-          height: '80vh',
-          overflow: 'auto',
-          position: 'relative',
-          '& ::-webkit-scrollbar': {
-            width: 8,
-            height: 8,
-          },
-          '& ::-webkit-scrollbar-track': {
-            backgroundColor: '#f5f5f5',
-          },
-          '& ::-webkit-scrollbar-thumb': {
-            backgroundColor: '#bdbdbd',
-            borderRadius: 4,
-          },
-        }}
-      >
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4">Appointments Schedule</Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => setIsModalOpen(true)}
+        >
+          Create Appointment
+        </Button>
+      </Box>
+
+      <Paper sx={{ overflowX: 'auto' }}>
         <Box sx={{ display: 'flex', minWidth: 'fit-content' }}>
           {/* Time Column - Sticky on X axis */}
           <Box sx={{ 
@@ -451,7 +461,7 @@ const Appointments = () => {
                   key={`${room.id}-${hour}`}
                   hour={hour}
                   roomId={room.id}
-                  onDrop={handleAppointmentMove}
+                  onDrop={handleMoveAppointment}
                 />
               ))}
 
@@ -462,13 +472,19 @@ const Appointments = () => {
                   <AppointmentBlock 
                     key={appointment.id} 
                     appointment={appointment}
-                    onMove={handleAppointmentMove}
+                    onMove={handleMoveAppointment}
                   />
                 ))}
             </Box>
           ))}
         </Box>
       </Paper>
+
+      <AppointmentModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleModalSuccess}
+      />
     </Box>
   );
 };
