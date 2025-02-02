@@ -1,3 +1,9 @@
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+  NOT_SPECIFIED = 'not_specified'
+}
+
 export interface Address {
   street: string;
   city: string;
@@ -10,7 +16,7 @@ export interface Patient {
   lastName: string;
   email: string;
   phoneNumber: string;
-  gender: string;
+  gender: Gender;
   birthDate: string;
   address: Address;
   lastVisit?: string;

@@ -17,6 +17,8 @@ import {
   Typography,
   Autocomplete,
   CircularProgress,
+  Box,
+  FormHelperText
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -65,7 +67,10 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
   const [appointmentData, setAppointmentData] = useState<AppointmentFormData>(initialAppointmentData);
   const [newPatientData, setNewPatientData] = useState<NewPatientData>(initialNewPatientData);
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
-  
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [availableSlots, setAvailableSlots] = useState<Array<{ startTime: string; endTime: string; roomId: string }>>([]);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+
   // Data for dropdowns
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
@@ -108,19 +113,64 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
     searchPatients();
   }, [searchQuery]);
 
+  useEffect(() => {
+    const checkAvailability = async () => {
+      if (appointmentData.doctorId && appointmentData.startTime) {
+        setIsCheckingAvailability(true);
+        try {
+          const slots = await appointmentService.getAvailableSlots(
+            appointmentData.doctorId,
+            format(new Date(appointmentData.startTime), 'yyyy-MM-dd')
+          );
+          setAvailableSlots(slots);
+        } catch (error) {
+          console.error('Error checking availability:', error);
+          toast.error('Error checking doctor availability');
+        } finally {
+          setIsCheckingAvailability(false);
+        }
+      }
+    };
+    checkAvailability();
+  }, [appointmentData.doctorId, appointmentData.startTime]);
+
   const handleAppointmentDataChange = (field: keyof AppointmentFormData, value: any) => {
     setAppointmentData((prev) => ({
       ...prev,
       [field]: value,
     }));
 
-    // Auto-fill price when treatment is selected
+    // Auto-fill price and calculate end time when treatment is selected
     if (field === 'treatmentId') {
       const treatment = treatments.find((t) => t._id === value);
       if (treatment) {
+        const updatedData: Partial<AppointmentFormData> = {
+          price: treatment.price
+        };
+        
+        // If we have a start time, calculate end time based on treatment duration
+        if (appointmentData.startTime) {
+          const startTime = new Date(appointmentData.startTime);
+          const endTime = new Date(startTime.getTime() + treatment.duration * 60000); // Convert minutes to milliseconds
+          updatedData.endTime = format(endTime, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
+        }
+
         setAppointmentData((prev) => ({
           ...prev,
-          price: treatment.price,
+          ...updatedData
+        }));
+      }
+    }
+
+    // Calculate end time when start time changes
+    if (field === 'startTime' && value && appointmentData.treatmentId) {
+      const treatment = treatments.find((t) => t._id === appointmentData.treatmentId);
+      if (treatment) {
+        const startTime = new Date(value);
+        const endTime = new Date(startTime.getTime() + treatment.duration * 60000);
+        setAppointmentData((prev) => ({
+          ...prev,
+          endTime: format(endTime, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx")
         }));
       }
     }
@@ -147,7 +197,63 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
     }
   };
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    // Validate patient selection
+    if (patientType === 'existing' && !selectedPatientId) {
+      newErrors.patient = 'Please select a patient';
+    }
+
+    // Validate new patient data
+    if (patientType === 'new') {
+      if (!newPatientData.firstName) newErrors.firstName = 'First name is required';
+      if (!newPatientData.lastName) newErrors.lastName = 'Last name is required';
+      if (!newPatientData.email) newErrors.email = 'Email is required';
+      if (newPatientData.email && !/\S+@\S+\.\S+/.test(newPatientData.email)) {
+        newErrors.email = 'Invalid email format';
+      }
+      if (!newPatientData.phoneNumber) newErrors.phoneNumber = 'Phone number is required';
+    }
+
+    // Validate appointment data
+    if (!appointmentData.doctorId) newErrors.doctorId = 'Please select a doctor';
+    if (!appointmentData.treatmentId) newErrors.treatmentId = 'Please select a treatment';
+    if (!appointmentData.roomId) newErrors.roomId = 'Please select a room';
+    if (!appointmentData.startTime) newErrors.startTime = 'Please select start time';
+    if (!appointmentData.endTime) newErrors.endTime = 'Please select end time';
+
+    // Validate time selection
+    if (appointmentData.startTime && appointmentData.endTime) {
+      const start = new Date(appointmentData.startTime);
+      const end = new Date(appointmentData.endTime);
+      
+      if (end <= start) {
+        newErrors.endTime = 'End time must be after start time';
+      }
+
+      // Check if selected time slot is available
+      const isSlotAvailable = availableSlots.some(slot => {
+        const slotStart = new Date(slot.startTime);
+        const slotEnd = new Date(slot.endTime);
+        return start >= slotStart && end <= slotEnd && slot.roomId === appointmentData.roomId;
+      });
+
+      if (!isSlotAvailable) {
+        newErrors.startTime = 'Selected time slot is not available';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      toast.error('Please fix the errors before submitting');
+      return;
+    }
+
     setLoading(true);
     try {
       const submitData = {
@@ -189,13 +295,31 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
           {patientType === 'existing' ? (
             <Grid item xs={12}>
               <Autocomplete
-                fullWidth
                 options={patients}
-                getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
-                onChange={(_, value) => setSelectedPatientId(value?._id || '')}
-                onInputChange={(_, value) => setSearchQuery(value)}
+                getOptionLabel={(option) => `${option.firstName} ${option.lastName} (${option.email})`}
+                value={patients.find(p => p._id === selectedPatientId) || null}
+                onChange={(_, newValue) => {
+                  setSelectedPatientId(newValue?._id || '');
+                }}
+                onInputChange={(_, value) => {
+                  setSearchQuery(value);
+                }}
+                loading={loading}
                 renderInput={(params) => (
-                  <TextField {...params} label="Search Patient" variant="outlined" />
+                  <TextField
+                    {...params}
+                    label="Search Patient"
+                    variant="outlined"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
                 )}
               />
             </Grid>
@@ -207,6 +331,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                   label="First Name"
                   value={newPatientData.firstName}
                   onChange={(e) => handleNewPatientDataChange('firstName', e.target.value)}
+                  error={!!errors.firstName}
+                  helperText={errors.firstName}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -215,6 +341,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                   label="Last Name"
                   value={newPatientData.lastName}
                   onChange={(e) => handleNewPatientDataChange('lastName', e.target.value)}
+                  error={!!errors.lastName}
+                  helperText={errors.lastName}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -224,6 +352,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                   type="email"
                   value={newPatientData.email}
                   onChange={(e) => handleNewPatientDataChange('email', e.target.value)}
+                  error={!!errors.email}
+                  helperText={errors.email}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -232,6 +362,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                   label="Phone Number"
                   value={newPatientData.phoneNumber}
                   onChange={(e) => handleNewPatientDataChange('phoneNumber', e.target.value)}
+                  error={!!errors.phoneNumber}
+                  helperText={errors.phoneNumber}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -291,7 +423,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
           </Grid>
 
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth>
+            <FormControl fullWidth error={!!errors.doctorId}>
               <InputLabel>Doctor</InputLabel>
               <Select
                 value={appointmentData.doctorId}
@@ -304,11 +436,16 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                   </MenuItem>
                 ))}
               </Select>
+              {errors.doctorId && (
+                <Typography color="error" variant="caption">
+                  {errors.doctorId}
+                </Typography>
+              )}
             </FormControl>
           </Grid>
 
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth>
+            <FormControl fullWidth error={!!errors.treatmentId}>
               <InputLabel>Treatment</InputLabel>
               <Select
                 value={appointmentData.treatmentId}
@@ -317,15 +454,23 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
               >
                 {treatments.map((treatment) => (
                   <MenuItem key={treatment._id} value={treatment._id}>
-                    {`${treatment.name} ($${treatment.price})`}
+                    <Box>
+                      <Typography variant="body1">{treatment.name}</Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Duration: {treatment.duration} min • Price: ${treatment.price}
+                      </Typography>
+                    </Box>
                   </MenuItem>
                 ))}
               </Select>
+              {errors.treatmentId && (
+                <FormHelperText error>{errors.treatmentId}</FormHelperText>
+              )}
             </FormControl>
           </Grid>
 
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth>
+            <FormControl fullWidth error={!!errors.roomId}>
               <InputLabel>Room</InputLabel>
               <Select
                 value={appointmentData.roomId}
@@ -338,6 +483,11 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                   </MenuItem>
                 ))}
               </Select>
+              {errors.roomId && (
+                <Typography color="error" variant="caption">
+                  {errors.roomId}
+                </Typography>
+              )}
             </FormControl>
           </Grid>
 
@@ -347,18 +497,31 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                 label="Start Time"
                 value={appointmentData.startTime ? new Date(appointmentData.startTime) : null}
                 onChange={(date) => handleDateChange(date, 'start')}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    error: !!errors.startTime,
+                    helperText: errors.startTime
+                  }
+                }}
               />
             </LocalizationProvider>
+            {isCheckingAvailability && (
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                <CircularProgress size={20} sx={{ mr: 1 }} />
+                <Typography variant="caption">Checking availability...</Typography>
+              </Box>
+            )}
           </Grid>
 
           <Grid item xs={12} sm={6}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DateTimePicker
-                label="End Time"
-                value={appointmentData.endTime ? new Date(appointmentData.endTime) : null}
-                onChange={(date) => handleDateChange(date, 'end')}
-              />
-            </LocalizationProvider>
+            <TextField
+              fullWidth
+              label="End Time"
+              value={appointmentData.endTime ? format(new Date(appointmentData.endTime), 'PPpp') : ''}
+              disabled
+              helperText="End time is calculated based on treatment duration"
+            />
           </Grid>
 
           <Grid item xs={12} sm={6}>
