@@ -10,7 +10,10 @@ import {
   mockRooms,
   mockPatients,
   mockAvailableSlots,
-  mockAppointments
+  mockAppointments,
+  mockSpecializations,
+  mockDoctorSpecializations,
+  mockRoomSpecializations
 } from '../mocks/appointmentMockData';
 
 export { AppointmentStatus, PaymentStatus } from '../types/appointment';
@@ -356,6 +359,52 @@ const getDoctorAvailability = async (date: string): Promise<DoctorAvailability[]
   return response.data.data;
 };
 
+const getAvailableDoctorsForTreatment = async (treatmentId: string): Promise<Doctor[]> => {
+  if (USE_MOCK_DATA) {
+    const treatment = mockTreatments.find(t => t._id === treatmentId);
+    if (!treatment) return [];
+
+    // Get specialization for this treatment
+    const specialization = mockSpecializations.find(s => s._id === treatment.specializationId);
+    if (!specialization) return [];
+
+    // Get doctors who have this specialization
+    const doctorsWithSpecialization = mockDoctorSpecializations
+      .filter(ds => ds.specializationIds.includes(specialization._id))
+      .map(ds => ds.doctorId);
+
+    return mockDoctors.filter(d => doctorsWithSpecialization.includes(d._id));
+  }
+
+  const response = await axiosInstance.get<ApiResponse<Doctor[]>>('/doctors/available', {
+    params: { treatmentId }
+  });
+  return response.data.data;
+};
+
+const getAvailableRoomsForTreatment = async (treatmentId: string): Promise<Room[]> => {
+  if (USE_MOCK_DATA) {
+    const treatment = mockTreatments.find(t => t._id === treatmentId);
+    if (!treatment) return [];
+
+    // Get specialization for this treatment
+    const specialization = mockSpecializations.find(s => s._id === treatment.specializationId);
+    if (!specialization) return [];
+
+    // Get rooms that have this specialization
+    const roomsWithSpecialization = mockRoomSpecializations
+      .filter(rs => rs.specializationIds.includes(specialization._id))
+      .map(rs => rs.roomId);
+
+    return mockRooms.filter(r => roomsWithSpecialization.includes(r._id));
+  }
+
+  const response = await axiosInstance.get<ApiResponse<Room[]>>('/rooms/available', {
+    params: { treatmentId }
+  });
+  return response.data.data;
+};
+
 export const appointmentService = {
   createAppointment,
   getDoctors,
@@ -364,5 +413,7 @@ export const appointmentService = {
   searchPatients,
   getAvailableSlots,
   checkForConflicts,
-  getDoctorAvailability
+  getDoctorAvailability,
+  getAvailableDoctorsForTreatment,
+  getAvailableRoomsForTreatment
 };

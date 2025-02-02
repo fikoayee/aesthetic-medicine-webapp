@@ -84,7 +84,11 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [patientSearchInput, setPatientSearchInput] = useState('');
+
+  // State for available doctors and rooms based on treatment
+  const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
+  const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -109,17 +113,20 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
 
   useEffect(() => {
     const searchPatients = async () => {
-      if (searchQuery.length >= 2) {
+      if (patientType === 'existing' && patientSearchInput.trim()) {
         try {
-          const results = await appointmentService.searchPatients(searchQuery);
+          const results = await appointmentService.searchPatients(patientSearchInput);
           setPatients(results);
         } catch (error) {
           console.error('Error searching patients:', error);
+          toast.error('Error searching for patients');
         }
       }
     };
-    searchPatients();
-  }, [searchQuery]);
+
+    const timeoutId = setTimeout(searchPatients, 300);
+    return () => clearTimeout(timeoutId);
+  }, [patientSearchInput, patientType]);
 
   useEffect(() => {
     const fetchDoctorAvailability = async () => {
@@ -230,6 +237,36 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
       setAvailableTimeSlots([]);
     }
   }, [appointmentData.doctorId, appointmentData.treatmentId, selectedDate, doctorAvailability, treatments]);
+
+  useEffect(() => {
+    const fetchAvailableResources = async () => {
+      if (appointmentData.treatmentId) {
+        try {
+          const [doctors, rooms] = await Promise.all([
+            appointmentService.getAvailableDoctorsForTreatment(appointmentData.treatmentId),
+            appointmentService.getAvailableRoomsForTreatment(appointmentData.treatmentId)
+          ]);
+          setAvailableDoctors(doctors);
+          setAvailableRooms(rooms);
+          
+          // Clear selected doctor and room if they're not available for this treatment
+          if (!doctors.find(d => d._id === appointmentData.doctorId)) {
+            setAppointmentData(prev => ({ ...prev, doctorId: '' }));
+          }
+          if (!rooms.find(r => r._id === appointmentData.roomId)) {
+            setAppointmentData(prev => ({ ...prev, roomId: '' }));
+          }
+        } catch (error) {
+          console.error('Error fetching available resources:', error);
+          toast.error('Error fetching available doctors and rooms');
+        }
+      } else {
+        setAvailableDoctors([]);
+        setAvailableRooms([]);
+      }
+    };
+    fetchAvailableResources();
+  }, [appointmentData.treatmentId]);
 
   const handleAppointmentDataChange = (field: keyof AppointmentFormData, value: any) => {
     setAppointmentData((prev) => ({
@@ -386,48 +423,59 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
             <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
               Patient Information
             </Typography>
-            <RadioGroup
-              row
-              value={patientType}
-              onChange={(e) => setPatientType(e.target.value as 'existing' | 'new')}
-            >
-              <FormControlLabel value="existing" control={<Radio />} label="Existing Patient" />
-              <FormControlLabel value="new" control={<Radio />} label="New Patient" />
-            </RadioGroup>
+            <FormControl component="fieldset">
+              <RadioGroup
+                row
+                value={patientType}
+                onChange={(e) => setPatientType(e.target.value as 'new' | 'existing')}
+              >
+                <FormControlLabel value="existing" control={<Radio />} label="Existing Patient" />
+                <FormControlLabel value="new" control={<Radio />} label="New Patient" />
+              </RadioGroup>
+            </FormControl>
           </Grid>
 
-          {patientType === 'existing' ? (
+          {patientType === 'existing' && (
             <Grid item xs={12}>
               <Autocomplete
-                options={patients}
-                getOptionLabel={(option) => `${option.firstName} ${option.lastName} (${option.email})`}
                 value={patients.find(p => p._id === selectedPatientId) || null}
                 onChange={(_, newValue) => {
                   setSelectedPatientId(newValue?._id || '');
                 }}
-                onInputChange={(_, value) => {
-                  setSearchQuery(value);
+                onInputChange={(_, newInputValue) => {
+                  setPatientSearchInput(newInputValue);
                 }}
-                loading={loading}
+                inputValue={patientSearchInput}
+                options={patients}
+                getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     label="Search Patient"
-                    variant="outlined"
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
+                    error={!!errors.patient}
+                    helperText={errors.patient}
+                    fullWidth
                   />
                 )}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props}>
+                    <Box>
+                      <Typography variant="body1">
+                        {option.firstName} {option.lastName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {option.email} • {option.phoneNumber}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+                loading={loading}
+                loadingText="Searching..."
+                noOptionsText={patientSearchInput ? "No patients found" : "Type to search"}
               />
             </Grid>
-          ) : (
+          )}
+          {patientType === 'new' && (
             <>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -543,14 +591,43 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
 
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
+              <InputLabel>Treatment</InputLabel>
+              <Select
+                value={appointmentData.treatmentId}
+                onChange={(e) => handleAppointmentDataChange('treatmentId', e.target.value)}
+                label="Treatment"
+                error={!!errors.treatmentId}
+              >
+                {treatments.map((treatment) => (
+                  <MenuItem key={treatment._id} value={treatment._id}>
+                    <Box>
+                      <Typography variant="body1">
+                        {treatment.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {treatment.duration} min - ${treatment.price}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors.treatmentId && (
+                <FormHelperText error>{errors.treatmentId}</FormHelperText>
+              )}
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
               <InputLabel>Doctor</InputLabel>
               <Select
                 value={appointmentData.doctorId}
                 onChange={(e) => handleAppointmentDataChange('doctorId', e.target.value)}
                 label="Doctor"
                 error={!!errors.doctorId}
+                disabled={!appointmentData.treatmentId}
               >
-                {doctors.map((doctor) => {
+                {availableDoctors.map((doctor) => {
                   const hasAvailability = selectedDate ? 
                     (doctorAvailability[doctor._id]?.length ?? 0) > 0 : true;
                   
@@ -577,6 +654,41 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
               </Select>
               {errors.doctorId && (
                 <FormHelperText error>{errors.doctorId}</FormHelperText>
+              )}
+              {!appointmentData.treatmentId && (
+                <FormHelperText>Please select a treatment first</FormHelperText>
+              )}
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel>Room</InputLabel>
+              <Select
+                value={appointmentData.roomId}
+                onChange={(e) => handleAppointmentDataChange('roomId', e.target.value)}
+                label="Room"
+                error={!!errors.roomId}
+                disabled={!appointmentData.treatmentId}
+              >
+                {availableRooms.map((room) => (
+                  <MenuItem key={room._id} value={room._id}>
+                    <Box>
+                      <Typography variant="body1">
+                        {room.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {room.description}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors.roomId && (
+                <FormHelperText error>{errors.roomId}</FormHelperText>
+              )}
+              {!appointmentData.treatmentId && (
+                <FormHelperText>Please select a treatment first</FormHelperText>
               )}
             </FormControl>
           </Grid>
@@ -610,53 +722,6 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                 <FormHelperText>
                   Please select a date, doctor, and treatment to see available time slots
                 </FormHelperText>
-              )}
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth error={!!errors.treatmentId}>
-              <InputLabel>Treatment</InputLabel>
-              <Select
-                value={appointmentData.treatmentId}
-                onChange={(e) => handleAppointmentDataChange('treatmentId', e.target.value)}
-                label="Treatment"
-              >
-                {treatments.map((treatment) => (
-                  <MenuItem key={treatment._id} value={treatment._id}>
-                    <Box>
-                      <Typography variant="body1">{treatment.name}</Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        Duration: {treatment.duration} min • Price: ${treatment.price}
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-              {errors.treatmentId && (
-                <FormHelperText error>{errors.treatmentId}</FormHelperText>
-              )}
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth error={!!errors.roomId}>
-              <InputLabel>Room</InputLabel>
-              <Select
-                value={appointmentData.roomId}
-                onChange={(e) => handleAppointmentDataChange('roomId', e.target.value)}
-                label="Room"
-              >
-                {rooms.map((room) => (
-                  <MenuItem key={room._id} value={room._id}>
-                    {room.name}
-                  </MenuItem>
-                ))}
-              </Select>
-              {errors.roomId && (
-                <Typography color="error" variant="caption">
-                  {errors.roomId}
-                </Typography>
               )}
             </FormControl>
           </Grid>

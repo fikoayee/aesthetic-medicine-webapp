@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { Gender } from '@/types/patient';
 import { AppointmentStatus, PaymentStatus } from '@/types/appointment';
+import { Specialization, DoctorSpecialization, RoomSpecialization } from '../types/specialization';
 
 // Helper function to create MongoDB ObjectId
 const createObjectId = () => new Types.ObjectId().toString();
@@ -21,22 +22,24 @@ const createTimeTomorrow = (hours: number, minutes: number = 0) => {
 };
 
 // Specializations
-export const mockSpecializations = [
+export const mockSpecializations: Specialization[] = [
   {
     _id: createObjectId(),
     name: 'Dermatology',
     description: 'Skin treatments and procedures',
-    treatments: [], // Will be filled after treatments are defined
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01')
+    treatmentIds: [] // We'll fill this after creating treatments
   },
   {
     _id: createObjectId(),
     name: 'Aesthetic Medicine',
     description: 'Cosmetic and aesthetic procedures',
-    treatments: [],
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01')
+    treatmentIds: []
+  },
+  {
+    _id: createObjectId(),
+    name: 'Laser Therapy',
+    description: 'Laser-based treatments',
+    treatmentIds: []
   }
 ];
 
@@ -45,54 +48,73 @@ export const mockTreatments = [
   {
     _id: createObjectId(),
     name: 'Botox Injection',
-    description: 'Wrinkle reduction treatment',
-    duration: 30, // minutes
-    price: 300,
-    specialization: mockSpecializations[1]._id,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01')
+    description: 'Reduces appearance of facial wrinkles',
+    duration: 30,
+    price: 500,
+    specializationId: mockSpecializations[1]._id // Aesthetic Medicine
   },
   {
     _id: createObjectId(),
-    name: 'Dermal Fillers',
-    description: 'Volume enhancement treatment',
+    name: 'Laser Hair Removal',
+    description: 'Permanent hair reduction treatment',
     duration: 45,
-    price: 450,
-    specialization: mockSpecializations[1]._id,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01')
+    price: 300,
+    specializationId: mockSpecializations[2]._id // Laser Therapy
   },
   {
     _id: createObjectId(),
     name: 'Acne Treatment',
-    description: 'Advanced acne therapy',
+    description: 'Deep cleansing and acne treatment',
     duration: 60,
     price: 200,
-    specialization: mockSpecializations[0]._id,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01')
+    specializationId: mockSpecializations[0]._id // Dermatology
   }
 ];
 
-// Update specializations with treatments
-mockSpecializations[0].treatments = [mockTreatments[2]._id];
-mockSpecializations[1].treatments = [mockTreatments[0]._id, mockTreatments[1]._id];
+// Update specializations with treatment IDs
+mockSpecializations.forEach(spec => {
+  spec.treatmentIds = mockTreatments
+    .filter(t => t.specializationId === spec._id)
+    .map(t => t._id);
+});
+
+// Doctor Specializations
+export const mockDoctorSpecializations: DoctorSpecialization[] = [
+  {
+    doctorId: createObjectId(),
+    specializationIds: [mockSpecializations[0]._id, mockSpecializations[1]._id] // Dermatology and Aesthetic Medicine
+  },
+  {
+    doctorId: createObjectId(),
+    specializationIds: [mockSpecializations[1]._id, mockSpecializations[2]._id] // Aesthetic Medicine and Laser Therapy
+  }
+];
+
+// Room Specializations
+export const mockRoomSpecializations: RoomSpecialization[] = [
+  {
+    roomId: createObjectId(),
+    specializationIds: [mockSpecializations[0]._id, mockSpecializations[1]._id] // Dermatology and Aesthetic Medicine
+  },
+  {
+    roomId: createObjectId(),
+    specializationIds: [mockSpecializations[2]._id] // Laser Therapy only
+  }
+];
 
 // Rooms
 export const mockRooms = [
   {
-    _id: createObjectId(),
+    _id: mockRoomSpecializations[0].roomId,
     name: 'Room 101',
     description: 'Main treatment room',
-    specializations: [mockSpecializations[0]._id, mockSpecializations[1]._id],
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01')
   },
   {
-    _id: createObjectId(),
+    _id: mockRoomSpecializations[1].roomId,
     name: 'Room 102',
     description: 'Aesthetic procedures room',
-    specializations: [mockSpecializations[1]._id],
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01')
   }
@@ -101,10 +123,9 @@ export const mockRooms = [
 // Doctors with working hours
 export const mockDoctors = [
   {
-    _id: createObjectId(),
+    _id: mockDoctorSpecializations[0].doctorId,
     firstName: 'John',
     lastName: 'Smith',
-    specializations: [mockSpecializations[0]._id, mockSpecializations[1]._id],
     phoneNumber: '+1234567890',
     email: 'john.smith@clinic.com',
     workingDays: new Map([
@@ -121,10 +142,9 @@ export const mockDoctors = [
     updatedAt: new Date('2024-01-01')
   },
   {
-    _id: createObjectId(),
+    _id: mockDoctorSpecializations[1].doctorId,
     firstName: 'Sarah',
     lastName: 'Johnson',
-    specializations: [mockSpecializations[1]._id],
     phoneNumber: '+1234567891',
     email: 'sarah.johnson@clinic.com',
     workingDays: new Map([
