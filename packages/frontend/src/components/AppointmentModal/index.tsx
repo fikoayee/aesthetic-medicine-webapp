@@ -24,6 +24,7 @@ import {
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import { appointmentService, AppointmentFormData, NewPatientData, TimeSlotConflict } from '../../services/appointmentService';
@@ -74,6 +75,10 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
   const [conflicts, setConflicts] = useState<TimeSlotConflict[]>([]);
   const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
 
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [doctorAvailability, setDoctorAvailability] = useState<Record<string, { startTime: string; endTime: string }[]>>({});
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+
   // Data for dropdowns
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
@@ -115,6 +120,25 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
     };
     searchPatients();
   }, [searchQuery]);
+
+  useEffect(() => {
+    const fetchDoctorAvailability = async () => {
+      if (selectedDate) {
+        try {
+          const availability = await appointmentService.getDoctorAvailability(selectedDate.toISOString());
+          const availabilityMap = availability.reduce((acc, curr) => {
+            acc[curr.doctorId] = curr.availableSlots;
+            return acc;
+          }, {} as Record<string, { startTime: string; endTime: string }[]>);
+          setDoctorAvailability(availabilityMap);
+        } catch (error) {
+          console.error('Error fetching doctor availability:', error);
+          toast.error('Error fetching doctor availability');
+        }
+      }
+    };
+    fetchDoctorAvailability();
+  }, [selectedDate]);
 
   useEffect(() => {
     const checkAvailability = async () => {
@@ -175,6 +199,37 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
     selectedPatientId,
     patientType
   ]);
+
+  useEffect(() => {
+    if (appointmentData.doctorId && selectedDate) {
+      const doctorSlots = doctorAvailability[appointmentData.doctorId] || [];
+      const slots: string[] = [];
+      
+      // Get selected treatment duration
+      const selectedTreatment = treatments.find(t => t._id === appointmentData.treatmentId);
+      const treatmentDuration = selectedTreatment?.duration || 30; // default to 30 minutes if no treatment selected
+      
+      doctorSlots.forEach(slot => {
+        const start = new Date(slot.startTime);
+        const end = new Date(slot.endTime);
+        
+        // Check if this slot is long enough for the treatment
+        const slotDuration = (end.getTime() - start.getTime()) / (1000 * 60); // convert to minutes
+        
+        if (slotDuration >= treatmentDuration) {
+          // Generate slots until there's not enough time left for the treatment
+          while (start.getTime() + treatmentDuration * 60 * 1000 <= end.getTime()) {
+            slots.push(start.toISOString());
+            start.setMinutes(start.getMinutes() + 30);
+          }
+        }
+      });
+      
+      setAvailableTimeSlots(slots);
+    } else {
+      setAvailableTimeSlots([]);
+    }
+  }, [appointmentData.doctorId, appointmentData.treatmentId, selectedDate, doctorAvailability, treatments]);
 
   const handleAppointmentDataChange = (field: keyof AppointmentFormData, value: any) => {
     setAppointmentData((prev) => ({
@@ -237,6 +292,15 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
       const formattedDate = format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
       handleAppointmentDataChange(type === 'start' ? 'startTime' : 'endTime', formattedDate);
     }
+  };
+
+  const handleDateSelection = (date: Date | null) => {
+    setSelectedDate(date);
+    setAppointmentData(prev => ({
+      ...prev,
+      startTime: '',
+      endTime: ''
+    }));
   };
 
   const validateForm = () => {
@@ -463,23 +527,89 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
           </Grid>
 
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth error={!!errors.doctorId}>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Select Date"
+                value={selectedDate}
+                onChange={handleDateSelection}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
               <InputLabel>Doctor</InputLabel>
               <Select
                 value={appointmentData.doctorId}
                 onChange={(e) => handleAppointmentDataChange('doctorId', e.target.value)}
                 label="Doctor"
+                error={!!errors.doctorId}
               >
-                {doctors.map((doctor) => (
-                  <MenuItem key={doctor._id} value={doctor._id}>
-                    {`${doctor.firstName} ${doctor.lastName}`}
-                  </MenuItem>
-                ))}
+                {doctors.map((doctor) => {
+                  const hasAvailability = selectedDate ? 
+                    (doctorAvailability[doctor._id]?.length ?? 0) > 0 : true;
+                  
+                  return (
+                    <MenuItem 
+                      key={doctor._id} 
+                      value={doctor._id}
+                      disabled={!hasAvailability}
+                      sx={!hasAvailability ? { opacity: 0.5 } : undefined}
+                    >
+                      <Box>
+                        <Typography variant="body1">
+                          Dr. {doctor.firstName} {doctor.lastName}
+                        </Typography>
+                        {!hasAvailability && selectedDate && (
+                          <Typography variant="caption" color="text.secondary">
+                            No availability on {format(selectedDate, 'PP')}
+                          </Typography>
+                        )}
+                      </Box>
+                    </MenuItem>
+                  );
+                })}
               </Select>
               {errors.doctorId && (
-                <Typography color="error" variant="caption">
-                  {errors.doctorId}
-                </Typography>
+                <FormHelperText error>{errors.doctorId}</FormHelperText>
+              )}
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel>Available Time Slots</InputLabel>
+              <Select
+                value={appointmentData.startTime}
+                onChange={(e) => handleAppointmentDataChange('startTime', e.target.value)}
+                label="Available Time Slots"
+                error={!!errors.startTime}
+                disabled={!selectedDate || !appointmentData.doctorId || !appointmentData.treatmentId}
+              >
+                {availableTimeSlots.map((slot) => {
+                  const startTime = new Date(slot);
+                  const selectedTreatment = treatments.find(t => t._id === appointmentData.treatmentId);
+                  const endTime = new Date(startTime.getTime() + (selectedTreatment?.duration || 30) * 60 * 1000);
+                  
+                  return (
+                    <MenuItem key={slot} value={slot}>
+                      {format(startTime, 'p')} - {format(endTime, 'p')} ({selectedTreatment?.duration || 30} min)
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+              {errors.startTime && (
+                <FormHelperText error>{errors.startTime}</FormHelperText>
+              )}
+              {(!selectedDate || !appointmentData.doctorId || !appointmentData.treatmentId) && (
+                <FormHelperText>
+                  Please select a date, doctor, and treatment to see available time slots
+                </FormHelperText>
               )}
             </FormControl>
           </Grid>
@@ -529,29 +659,6 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                 </Typography>
               )}
             </FormControl>
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DateTimePicker
-                label="Start Time"
-                value={appointmentData.startTime ? new Date(appointmentData.startTime) : null}
-                onChange={(date) => handleDateChange(date, 'start')}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    error: !!errors.startTime,
-                    helperText: errors.startTime
-                  }
-                }}
-              />
-            </LocalizationProvider>
-            {isCheckingAvailability && (
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                <CircularProgress size={20} sx={{ mr: 1 }} />
-                <Typography variant="caption">Checking availability...</Typography>
-              </Box>
-            )}
           </Grid>
 
           <Grid item xs={12} sm={6}>

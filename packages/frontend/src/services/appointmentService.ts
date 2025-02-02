@@ -46,6 +46,14 @@ export interface TimeSlotConflict {
   message: string;
 }
 
+export interface DoctorAvailability {
+  doctorId: string;
+  availableSlots: {
+    startTime: string;
+    endTime: string;
+  }[];
+}
+
 //set to true to use mock data
 const USE_MOCK_DATA = true;
 
@@ -271,6 +279,83 @@ const getAvailableSlots = async (doctorId: string, date: string): Promise<{ star
   return response.data.data.slots;
 };
 
+const getDoctorAvailability = async (date: string): Promise<DoctorAvailability[]> => {
+  if (USE_MOCK_DATA) {
+    // Convert date to start and end of day
+    const selectedDate = new Date(date);
+    const startOfDay = new Date(selectedDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(selectedDate.setHours(23, 59, 59, 999));
+
+    // Get all appointments for the selected date
+    const dayAppointments = mockAppointments.filter(apt => {
+      const aptDate = new Date(apt.startTime);
+      return (
+        aptDate >= startOfDay &&
+        aptDate <= endOfDay &&
+        apt.status !== AppointmentStatus.CANCELED
+      );
+    });
+
+    // Create availability slots for each doctor
+    return mockDoctors.map(doctor => {
+      // Get doctor's appointments for the day
+      const doctorAppointments = dayAppointments
+        .filter(apt => apt.doctor === doctor._id)
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+      // Default working hours (9 AM to 5 PM)
+      const workStart = new Date(selectedDate.setHours(9, 0, 0, 0));
+      const workEnd = new Date(selectedDate.setHours(17, 0, 0, 0));
+
+      // Generate available slots
+      const availableSlots: { startTime: string; endTime: string }[] = [];
+      let currentTime = new Date(workStart);
+
+      // If no appointments, entire work day is available
+      if (doctorAppointments.length === 0) {
+        availableSlots.push({
+          startTime: workStart.toISOString(),
+          endTime: workEnd.toISOString()
+        });
+      } else {
+        // Add slots between appointments
+        doctorAppointments.forEach((apt, index) => {
+          const aptStart = new Date(apt.startTime);
+          
+          // Add slot before appointment if there's time
+          if (currentTime < aptStart) {
+            availableSlots.push({
+              startTime: currentTime.toISOString(),
+              endTime: aptStart.toISOString()
+            });
+          }
+          
+          // Move current time to end of this appointment
+          currentTime = new Date(apt.endTime);
+
+          // If this is the last appointment and there's time after it
+          if (index === doctorAppointments.length - 1 && currentTime < workEnd) {
+            availableSlots.push({
+              startTime: currentTime.toISOString(),
+              endTime: workEnd.toISOString()
+            });
+          }
+        });
+      }
+
+      return {
+        doctorId: doctor._id,
+        availableSlots
+      };
+    });
+  }
+
+  const response = await axiosInstance.get<ApiResponse<DoctorAvailability[]>>('/doctors/availability', {
+    params: { date }
+  });
+  return response.data.data;
+};
+
 export const appointmentService = {
   createAppointment,
   getDoctors,
@@ -278,5 +363,6 @@ export const appointmentService = {
   getRooms,
   searchPatients,
   getAvailableSlots,
-  checkForConflicts
+  checkForConflicts,
+  getDoctorAvailability
 };

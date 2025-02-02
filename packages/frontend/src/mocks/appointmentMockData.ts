@@ -251,6 +251,34 @@ export const mockAppointments = [
     paymentStatus: PaymentStatus.PAID,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01')
+  },
+  {
+    _id: createObjectId(),
+    doctor: mockDoctors[0]._id,
+    patient: mockPatients[0]._id,
+    treatment: mockTreatments[0]._id,
+    room: mockRooms[0]._id,
+    startTime: createTimeToday(10), // Today at 10:00
+    endTime: createTimeToday(10, 30), // Today at 10:30
+    price: mockTreatments[0].price,
+    status: AppointmentStatus.BOOKED,
+    paymentStatus: PaymentStatus.UNPAID,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01')
+  },
+  {
+    _id: createObjectId(),
+    doctor: mockDoctors[0]._id,
+    patient: mockPatients[1]._id,
+    treatment: mockTreatments[1]._id,
+    room: mockRooms[0]._id,
+    startTime: createTimeToday(11), // Today at 11:00
+    endTime: createTimeToday(11, 15), // Today at 11:15
+    price: mockTreatments[1].price,
+    status: AppointmentStatus.BOOKED,
+    paymentStatus: PaymentStatus.PAID,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01')
   }
 ];
 
