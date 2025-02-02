@@ -18,14 +18,15 @@ import {
   Autocomplete,
   CircularProgress,
   Box,
-  FormHelperText
+  FormHelperText,
+  Paper
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
-import { appointmentService, AppointmentFormData, NewPatientData } from '../../services/appointmentService';
+import { appointmentService, AppointmentFormData, NewPatientData, TimeSlotConflict } from '../../services/appointmentService';
 import { Doctor } from '../../services/doctorService';
 import { Treatment } from '../../services/treatmentService';
 import { Room } from '../../services/roomService';
@@ -70,6 +71,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [availableSlots, setAvailableSlots] = useState<Array<{ startTime: string; endTime: string; roomId: string }>>([]);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [conflicts, setConflicts] = useState<TimeSlotConflict[]>([]);
+  const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
 
   // Data for dropdowns
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -133,6 +136,45 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
     };
     checkAvailability();
   }, [appointmentData.doctorId, appointmentData.startTime]);
+
+  useEffect(() => {
+    const checkConflicts = async () => {
+      if (
+        appointmentData.doctorId &&
+        appointmentData.roomId &&
+        appointmentData.startTime &&
+        appointmentData.endTime &&
+        (patientType === 'existing' ? selectedPatientId : true)
+      ) {
+        setIsCheckingConflicts(true);
+        try {
+          const conflicts = await appointmentService.checkForConflicts(
+            appointmentData.doctorId,
+            appointmentData.roomId,
+            patientType === 'existing' ? selectedPatientId : '',
+            appointmentData.startTime,
+            appointmentData.endTime
+          );
+          setConflicts(conflicts);
+        } catch (error) {
+          console.error('Error checking conflicts:', error);
+          toast.error('Error checking appointment conflicts');
+        } finally {
+          setIsCheckingConflicts(false);
+        }
+      } else {
+        setConflicts([]);
+      }
+    };
+    checkConflicts();
+  }, [
+    appointmentData.doctorId,
+    appointmentData.roomId,
+    appointmentData.startTime,
+    appointmentData.endTime,
+    selectedPatientId,
+    patientType
+  ]);
 
   const handleAppointmentDataChange = (field: keyof AppointmentFormData, value: any) => {
     setAppointmentData((prev) => ({
@@ -200,47 +242,45 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    // Validate patient selection
+    // Check for scheduling conflicts
+    if (conflicts.length > 0) {
+      newErrors.general = 'Cannot create appointment due to scheduling conflicts';
+    }
+
     if (patientType === 'existing' && !selectedPatientId) {
       newErrors.patient = 'Please select a patient';
     }
 
-    // Validate new patient data
-    if (patientType === 'new') {
-      if (!newPatientData.firstName) newErrors.firstName = 'First name is required';
-      if (!newPatientData.lastName) newErrors.lastName = 'Last name is required';
-      if (!newPatientData.email) newErrors.email = 'Email is required';
-      if (newPatientData.email && !/\S+@\S+\.\S+/.test(newPatientData.email)) {
-        newErrors.email = 'Invalid email format';
-      }
-      if (!newPatientData.phoneNumber) newErrors.phoneNumber = 'Phone number is required';
+    if (!appointmentData.doctorId) {
+      newErrors.doctorId = 'Please select a doctor';
     }
 
-    // Validate appointment data
-    if (!appointmentData.doctorId) newErrors.doctorId = 'Please select a doctor';
-    if (!appointmentData.treatmentId) newErrors.treatmentId = 'Please select a treatment';
-    if (!appointmentData.roomId) newErrors.roomId = 'Please select a room';
-    if (!appointmentData.startTime) newErrors.startTime = 'Please select start time';
-    if (!appointmentData.endTime) newErrors.endTime = 'Please select end time';
+    if (!appointmentData.treatmentId) {
+      newErrors.treatmentId = 'Please select a treatment';
+    }
 
-    // Validate time selection
-    if (appointmentData.startTime && appointmentData.endTime) {
-      const start = new Date(appointmentData.startTime);
-      const end = new Date(appointmentData.endTime);
-      
-      if (end <= start) {
-        newErrors.endTime = 'End time must be after start time';
+    if (!appointmentData.roomId) {
+      newErrors.roomId = 'Please select a room';
+    }
+
+    if (!appointmentData.startTime) {
+      newErrors.startTime = 'Please select start time';
+    }
+
+    if (patientType === 'new') {
+      if (!newPatientData.firstName) {
+        newErrors.firstName = 'First name is required';
       }
-
-      // Check if selected time slot is available
-      const isSlotAvailable = availableSlots.some(slot => {
-        const slotStart = new Date(slot.startTime);
-        const slotEnd = new Date(slot.endTime);
-        return start >= slotStart && end <= slotEnd && slot.roomId === appointmentData.roomId;
-      });
-
-      if (!isSlotAvailable) {
-        newErrors.startTime = 'Selected time slot is not available';
+      if (!newPatientData.lastName) {
+        newErrors.lastName = 'Last name is required';
+      }
+      if (!newPatientData.email) {
+        newErrors.email = 'Email is required';
+      } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(newPatientData.email)) {
+        newErrors.email = 'Invalid email address';
+      }
+      if (!newPatientData.phoneNumber) {
+        newErrors.phoneNumber = 'Phone number is required';
       }
     }
 
@@ -528,12 +568,12 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
             <TextField
               fullWidth
               label="Price"
-              type="number"
-              value={appointmentData.price}
-              onChange={(e) => handleAppointmentDataChange('price', parseFloat(e.target.value))}
+              value={`$${appointmentData.price}`}
+              disabled
               InputProps={{
-                startAdornment: '$',
+                readOnly: true,
               }}
+              helperText="Price is automatically set based on the selected treatment"
             />
           </Grid>
 
@@ -543,22 +583,86 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
               label="Notes"
               multiline
               rows={4}
-              value={appointmentData.note}
+              value={appointmentData.note || ''}
               onChange={(e) => handleAppointmentDataChange('note', e.target.value)}
+              placeholder="Add any special instructions or notes for this appointment"
             />
           </Grid>
+
+          {(isCheckingConflicts || conflicts.length > 0) && (
+            <Grid item xs={12}>
+              <Paper 
+                sx={{ 
+                  p: 2, 
+                  bgcolor: conflicts.length > 0 ? 'error.light' : 'background.default',
+                  color: conflicts.length > 0 ? 'error.contrastText' : 'text.primary'
+                }}
+              >
+                {isCheckingConflicts ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                    <Typography>Checking for conflicts...</Typography>
+                  </Box>
+                ) : conflicts.length > 0 ? (
+                  <>
+                    <Typography variant="h6" gutterBottom>
+                      Scheduling Conflicts Detected
+                    </Typography>
+                    {conflicts.map((conflict, index) => (
+                      <Box key={index} sx={{ mt: 1 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                          {conflict.message}
+                        </Typography>
+                        <Typography variant="body2">
+                          Time: {format(new Date(conflict.conflictingAppointment.startTime), 'PPpp')} - 
+                          {format(new Date(conflict.conflictingAppointment.endTime), 'pp')}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </>
+                ) : null}
+              </Paper>
+            </Grid>
+          )}
+
+          {selectedPatientId && appointmentData.treatmentId && appointmentData.startTime && (
+            <Grid item xs={12}>
+              <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                <Typography variant="h6" gutterBottom>
+                  Appointment Summary
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="textSecondary">
+                      Patient: {patients.find(p => p._id === selectedPatientId)?.firstName} {patients.find(p => p._id === selectedPatientId)?.lastName}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Treatment: {treatments.find(t => t._id === appointmentData.treatmentId)?.name}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="textSecondary">
+                      Start: {appointmentData.startTime ? format(new Date(appointmentData.startTime), 'PPpp') : ''}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      End: {appointmentData.endTime ? format(new Date(appointmentData.endTime), 'PPpp') : ''}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Duration: {treatments.find(t => t._id === appointmentData.treatmentId)?.duration} minutes
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Grid>
+          )}
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
-          Cancel
-        </Button>
+        <Button onClick={onClose}>Cancel</Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
-          color="primary"
-          disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} /> : null}
+          disabled={isCheckingConflicts || conflicts.length > 0 || loading}
         >
           {loading ? 'Creating...' : 'Create Appointment'}
         </Button>

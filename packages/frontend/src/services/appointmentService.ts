@@ -9,7 +9,8 @@ import {
   mockTreatments,
   mockRooms,
   mockPatients,
-  mockAvailableSlots
+  mockAvailableSlots,
+  mockAppointments
 } from '../mocks/appointmentMockData';
 
 export { AppointmentStatus, PaymentStatus } from '../types/appointment';
@@ -37,6 +38,12 @@ export interface CreateAppointmentData {
 interface ApiResponse<T> {
   status: string;
   data: T;
+}
+
+export interface TimeSlotConflict {
+  type: 'doctor' | 'room' | 'patient';
+  conflictingAppointment: Appointment;
+  message: string;
 }
 
 //set to true to use mock data
@@ -90,6 +97,83 @@ const createAppointment = async (data: CreateAppointmentData): Promise<Appointme
   } catch (error) {
     throw error;
   }
+};
+
+const checkForConflicts = async (
+  doctorId: string,
+  roomId: string,
+  patientId: string,
+  startTime: string,
+  endTime: string,
+  excludeAppointmentId?: string
+): Promise<TimeSlotConflict[]> => {
+  if (USE_MOCK_DATA) {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const conflicts: TimeSlotConflict[] = [];
+
+    // Filter appointments for the same day
+    const dayAppointments = mockAppointments.filter(apt => {
+      const aptDate = new Date(apt.startTime);
+      return (
+        aptDate.getFullYear() === start.getFullYear() &&
+        aptDate.getMonth() === start.getMonth() &&
+        aptDate.getDate() === start.getDate() &&
+        apt._id !== excludeAppointmentId &&
+        apt.status !== AppointmentStatus.CANCELED
+      );
+    });
+
+    // Check for time conflicts
+    dayAppointments.forEach(apt => {
+      const aptStart = new Date(apt.startTime);
+      const aptEnd = new Date(apt.endTime);
+
+      const hasTimeConflict = (
+        (start >= aptStart && start < aptEnd) || // Start time falls within existing appointment
+        (end > aptStart && end <= aptEnd) || // End time falls within existing appointment
+        (start <= aptStart && end >= aptEnd) // Existing appointment falls within new time slot
+      );
+
+      if (hasTimeConflict) {
+        if (apt.doctor === doctorId) {
+          conflicts.push({
+            type: 'doctor',
+            conflictingAppointment: apt,
+            message: 'Doctor has another appointment at this time'
+          });
+        }
+        if (apt.room === roomId) {
+          conflicts.push({
+            type: 'room',
+            conflictingAppointment: apt,
+            message: 'Room is occupied at this time'
+          });
+        }
+        if (apt.patient === patientId) {
+          conflicts.push({
+            type: 'patient',
+            conflictingAppointment: apt,
+            message: 'Patient has another appointment at this time'
+          });
+        }
+      }
+    });
+
+    return conflicts;
+  }
+
+  const response = await axiosInstance.get<ApiResponse<TimeSlotConflict[]>>('/appointments/check-conflicts', {
+    params: {
+      doctorId,
+      roomId,
+      patientId,
+      startTime,
+      endTime,
+      excludeAppointmentId
+    }
+  });
+  return response.data.data;
 };
 
 const getDoctors = async (): Promise<Doctor[]> => {
@@ -194,4 +278,5 @@ export const appointmentService = {
   getRooms,
   searchPatients,
   getAvailableSlots,
+  checkForConflicts
 };

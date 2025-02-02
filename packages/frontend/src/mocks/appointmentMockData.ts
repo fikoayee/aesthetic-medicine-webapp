@@ -5,6 +5,21 @@ import { AppointmentStatus, PaymentStatus } from '@/types/appointment';
 // Helper function to create MongoDB ObjectId
 const createObjectId = () => new Types.ObjectId().toString();
 
+// Helper function to create a date for today at specific hours
+const createTimeToday = (hours: number, minutes: number = 0) => {
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+};
+
+// Helper function to create a date for tomorrow at specific hours
+const createTimeTomorrow = (hours: number, minutes: number = 0) => {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+};
+
 // Specializations
 export const mockSpecializations = [
   {
@@ -187,12 +202,53 @@ export const mockAppointments = [
     patient: mockPatients[0]._id,
     treatment: mockTreatments[0]._id,
     room: mockRooms[0]._id,
-    startTime: new Date('2024-02-05T10:00:00Z'),
-    endTime: new Date('2024-02-05T10:30:00Z'),
+    startTime: createTimeToday(10), // Today at 10:00
+    endTime: createTimeToday(10, 30), // Today at 10:30
     price: mockTreatments[0].price,
     status: AppointmentStatus.BOOKED,
     paymentStatus: PaymentStatus.UNPAID,
-    note: 'First time patient',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01')
+  },
+  {
+    _id: createObjectId(),
+    doctor: mockDoctors[0]._id,
+    patient: mockPatients[1]._id,
+    treatment: mockTreatments[1]._id,
+    room: mockRooms[0]._id,
+    startTime: createTimeToday(14), // Today at 14:00
+    endTime: createTimeToday(14, 45), // Today at 14:45
+    price: mockTreatments[1].price,
+    status: AppointmentStatus.BOOKED,
+    paymentStatus: PaymentStatus.PAID,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01')
+  },
+  {
+    _id: createObjectId(),
+    doctor: mockDoctors[1]._id,
+    patient: mockPatients[2]._id,
+    treatment: mockTreatments[2]._id,
+    room: mockRooms[1]._id,
+    startTime: createTimeTomorrow(11), // Tomorrow at 11:00
+    endTime: createTimeTomorrow(12), // Tomorrow at 12:00
+    price: mockTreatments[2].price,
+    status: AppointmentStatus.BOOKED,
+    paymentStatus: PaymentStatus.UNPAID,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01')
+  },
+  {
+    _id: createObjectId(),
+    doctor: mockDoctors[1]._id,
+    patient: mockPatients[0]._id,
+    treatment: mockTreatments[0]._id,
+    room: mockRooms[1]._id,
+    startTime: createTimeTomorrow(15), // Tomorrow at 15:00
+    endTime: createTimeTomorrow(15, 30), // Tomorrow at 15:30
+    price: mockTreatments[0].price,
+    status: AppointmentStatus.BOOKED,
+    paymentStatus: PaymentStatus.PAID,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01')
   }
