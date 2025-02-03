@@ -7,22 +7,14 @@ const router = express.Router();
 // All routes require authentication
 router.use(authenticate);
 
-// GET /rooms
+// Routes accessible by all authenticated users
 router.get('/', RoomController.getAllRooms);
-
-// GET /rooms/by-treatment
-router.get('/by-treatment', RoomController.getAvailableRoomsForTreatment);
-
-// GET /rooms/:id
 router.get('/:id', RoomController.getRoomById);
+router.get('/:roomId/specializations', RoomController.getRoomSpecializations);
 
-// POST /rooms
+// Routes that require ADMIN role
 router.post('/', RoomController.createRoom);
-
-// PUT /rooms/:id
 router.put('/:id', RoomController.updateRoom);
-
-// DELETE /rooms/:id
 router.delete('/:id', RoomController.deleteRoom);
 
 export default router;

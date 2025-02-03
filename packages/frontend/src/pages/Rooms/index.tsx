@@ -25,6 +25,7 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  ListItemIcon,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -55,6 +56,8 @@ const Rooms = () => {
     description: '',
     specializations: [],
   });
+  const [expandedRoom, setExpandedRoom] = useState<string | null>(null);
+  const [roomSpecializations, setRoomSpecializations] = useState<{ [key: string]: Specialization[] }>({});
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
 
@@ -142,6 +145,26 @@ const Rooms = () => {
     }
   };
 
+  const handleAccordionChange = async (roomId: string) => {
+    if (expandedRoom !== roomId) {
+      setExpandedRoom(roomId);
+      if (!roomSpecializations[roomId]) {
+        try {
+          const specializations = await roomService.getRoomSpecializations(roomId);
+          setRoomSpecializations(prev => ({
+            ...prev,
+            [roomId]: specializations
+          }));
+        } catch (error) {
+          console.error('Error fetching room specializations:', error);
+          setError('Failed to load specializations');
+        }
+      }
+    } else {
+      setExpandedRoom(null);
+    }
+  };
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pl-PL', {
       style: 'currency',
@@ -210,44 +233,61 @@ const Rooms = () => {
                   {room.description}
                 </Typography>
                 
-                {room.specializations.map((spec) => (
-                  <Accordion key={spec._id} sx={{ mt: 1 }}>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Chip
-                          label={spec.name}
-                          size="small"
-                          color="primary"
-                          variant="outlined"
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {spec.treatments?.length || 0} treatments
-                        </Typography>
-                      </Box>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <List dense disablePadding>
-                        {spec.treatments?.map((treatment) => (
-                          <ListItem key={treatment._id} sx={{ px: 0 }}>
-                            <ListItemText
-                              primary={treatment.name}
-                              secondary={
-                                <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography variant="caption">
-                                    {treatment.duration} min
-                                  </Typography>
-                                  <Typography variant="caption" color="primary">
-                                    {formatPrice(treatment.price)}
-                                  </Typography>
-                                </Box>
-                              }
-                            />
-                          </ListItem>
+                <Accordion 
+                  expanded={expandedRoom === room._id}
+                  onChange={() => handleAccordionChange(room._id)}
+                >
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <TreatmentIcon sx={{ mr: 1 }} />
+                      <Typography>
+                        Specializations ({room.specializations?.length || 0})
+                      </Typography>
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    {roomSpecializations[room._id]?.length > 0 ? (
+                      <List disablePadding>
+                        {roomSpecializations[room._id].map((spec, index) => (
+                          <Box key={spec._id}>
+                            {index > 0 && <Divider />}
+                            <ListItem disablePadding sx={{ py: 1 }}>
+                              <ListItemText
+                                primary={spec.name}
+                                secondary={
+                                  <Box>
+                                    <Typography variant="body2" color="text.secondary">
+                                      {spec.description}
+                                    </Typography>
+                                    {spec.treatments?.length > 0 && (
+                                      <List dense>
+                                        {spec.treatments.map(treatment => (
+                                          <ListItem key={treatment._id} disablePadding>
+                                            <ListItemIcon sx={{ minWidth: 36 }}>
+                                              <TreatmentIcon fontSize="small" />
+                                            </ListItemIcon>
+                                            <ListItemText
+                                              primary={treatment.name}
+                                              secondary={`${treatment.duration} min • ${formatPrice(treatment.price)}`}
+                                            />
+                                          </ListItem>
+                                        ))}
+                                      </List>
+                                    )}
+                                  </Box>
+                                }
+                              />
+                            </ListItem>
+                          </Box>
                         ))}
                       </List>
-                    </AccordionDetails>
-                  </Accordion>
-                ))}
+                    ) : (
+                      <Typography color="textSecondary">
+                        No specializations assigned
+                      </Typography>
+                    )}
+                  </AccordionDetails>
+                </Accordion>
               </CardContent>
             </Card>
           </Grid>

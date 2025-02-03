@@ -194,4 +194,39 @@ export class RoomController {
       });
     }
   }
+
+  static async getRoomSpecializations(req: Request, res: Response) {
+    try {
+      const { roomId } = req.params;
+      
+      const room = await Room.findById(roomId)
+        .populate({
+          path: 'specializations',
+          populate: {
+            path: 'treatments',
+            model: 'Treatment'
+          }
+        });
+
+      if (!room) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Room not found'
+        });
+      }
+
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          specializations: room.specializations
+        }
+      });
+    } catch (error) {
+      logger.error('Get room specializations error:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Failed to get room specializations'
+      });
+    }
+  }
 }

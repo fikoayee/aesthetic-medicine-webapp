@@ -36,6 +36,12 @@ export interface SingleRoomResponse {
   };
 }
 
+interface ApiResponse<T> {
+  status: string;
+  message: string;
+  data: T;
+}
+
 export const roomService = {
   async getAllRooms() {
     const response = await axiosInstance.get<RoomResponse>('/rooms');
@@ -59,5 +65,18 @@ export const roomService = {
 
   async deleteRoom(id: string) {
     await axiosInstance.delete(`/rooms/${id}`);
-  }
+  },
+
+  async getRoomSpecializations(roomId: string) {
+    try {
+      const response = await axiosInstance.get<ApiResponse<{ specializations: Specialization[] }>>(`/rooms/${roomId}/specializations`);
+      if (response.data.status !== 'success') {
+        throw new Error(response.data.message);
+      }
+      return response.data.data.specializations;
+    } catch (error) {
+      console.error('Error in getRoomSpecializations:', error);
+      throw error;
+    }
+  },
 };
