@@ -102,5 +102,24 @@ export const specializationService = {
       console.error('Error in deleteSpecialization:', error);
       throw error;
     }
+  },
+
+  async transferTreatments(fromSpecializationId: string, toSpecializationId: string, treatmentIds: string[]): Promise<Specialization[]> {
+    try {
+      const response = await axiosInstance.post<ApiResponse<{ specializations: Specialization[] }>>('/specializations/transfer-treatments', {
+        fromSpecializationId,
+        toSpecializationId,
+        treatmentIds
+      });
+      
+      if (response.data.status !== 'success') {
+        throw new Error(response.data.message);
+      }
+      
+      return response.data.data.specializations;
+    } catch (error) {
+      console.error('Error in transferTreatments:', error);
+      throw error;
+    }
   }
 };

@@ -34,6 +34,7 @@ import { specializationService, Specialization, CreateSpecializationDto } from '
 import { treatmentService } from '../../services/treatmentService';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
+import TreatmentTransfer from '../../components/TreatmentTransfer';
 
 interface SpecializationFormData {
   name: string;
@@ -190,7 +191,7 @@ const Specializations = () => {
                     </Box>
                   )}
                 </Box>
-                
+
                 <Typography color="textSecondary" sx={{ mb: 2 }}>
                   {spec.description}
                 </Typography>
@@ -200,12 +201,12 @@ const Specializations = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <TreatmentIcon sx={{ mr: 1 }} />
                       <Typography>
-                        Treatments ({spec.treatments.length})
+                        Treatments ({spec.treatments?.length || 0})
                       </Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
-                    {spec.treatments.length > 0 ? (
+                    {spec.treatments?.length > 0 ? (
                       <List disablePadding>
                         {spec.treatments.map((treatment, index) => (
                           <Box key={treatment._id}>
@@ -234,6 +235,35 @@ const Specializations = () => {
           </Grid>
         ))}
       </Grid>
+
+      {isAdmin && specializations.length >= 2 && (
+        <Card sx={{ mt: 4 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Transfer Treatments
+            </Typography>
+            <TreatmentTransfer
+              specializations={specializations}
+              onTransferTreatments={async (fromSpecId, toSpecId, treatmentIds) => {
+                try {
+                  const updatedSpecs = await specializationService.transferTreatments(fromSpecId, toSpecId, treatmentIds);
+                  // Update the specializations that were affected by the transfer
+                  setSpecializations(prev => 
+                    prev.map(spec => {
+                      const updated = updatedSpecs.find(u => u._id === spec._id);
+                      return updated || spec;
+                    })
+                  );
+                  toast.success('Treatments transferred successfully');
+                } catch (error) {
+                  console.error('Error transferring treatments:', error);
+                  toast.error('Failed to transfer treatments');
+                }
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog 
         open={openDialog} 

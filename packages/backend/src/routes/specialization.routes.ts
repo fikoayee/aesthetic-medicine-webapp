@@ -4,22 +4,14 @@ import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(authenticate);
+// Routes accessible by all authenticated users
+router.get('/', authenticate, SpecializationController.getAllSpecializations);
+router.get('/:id', authenticate, SpecializationController.getSpecializationById);
 
-// Get all specializations (with treatments)
-router.get('/', SpecializationController.getAllSpecializations);
-
-// Get specialization by id (with treatments)
-router.get('/:id', SpecializationController.getSpecializationById);
-
-// Create new specialization (admin only)
-router.post('/', SpecializationController.createSpecialization);
-
-// Update specialization (admin only)
-router.put('/:id', SpecializationController.updateSpecialization);
-
-// Delete specialization (admin only)
-router.delete('/:id', SpecializationController.deleteSpecialization);
+// Routes that require ADMIN role
+router.post('/', authenticate, SpecializationController.createSpecialization);
+router.put('/:id', authenticate, SpecializationController.updateSpecialization);
+router.delete('/:id', authenticate, SpecializationController.deleteSpecialization);
+router.post('/transfer-treatments', authenticate, SpecializationController.transferTreatments);
 
 export default router;

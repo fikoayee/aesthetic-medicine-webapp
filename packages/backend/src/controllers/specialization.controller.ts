@@ -142,4 +142,65 @@ export class SpecializationController {
       });
     }
   }
+
+  static async transferTreatments(req: Request, res: Response) {
+    try {
+      const { fromSpecializationId, toSpecializationId, treatmentIds } = req.body;
+
+      // Validate input
+      if (!fromSpecializationId || !toSpecializationId || !treatmentIds) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Missing required fields'
+        });
+      }
+
+      // Check if both specializations exist
+      const [fromSpec, toSpec] = await Promise.all([
+        Specialization.findById(fromSpecializationId),
+        Specialization.findById(toSpecializationId)
+      ]);
+
+      if (!fromSpec || !toSpec) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'One or both specializations not found'
+        });
+      }
+
+      // Update treatments' specialization field
+      await Treatment.updateMany(
+        { _id: { $in: treatmentIds } },
+        { $set: { specialization: toSpecializationId } }
+      );
+
+      // Remove treatments from source specialization
+      await Specialization.findByIdAndUpdate(fromSpecializationId, {
+        $pull: { treatments: { $in: treatmentIds } }
+      });
+
+      // Add treatments to target specialization
+      await Specialization.findByIdAndUpdate(toSpecializationId, {
+        $addToSet: { treatments: { $each: treatmentIds } }
+      });
+
+      // Get updated specializations
+      const updatedSpecs = await Specialization.find({
+        _id: { $in: [fromSpecializationId, toSpecializationId] }
+      }).populate('treatments');
+
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          specializations: updatedSpecs
+        }
+      });
+    } catch (error) {
+      logger.error('Transfer treatments error:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Failed to transfer treatments'
+      });
+    }
+  }
 }
