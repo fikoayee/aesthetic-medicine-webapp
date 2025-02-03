@@ -427,7 +427,7 @@ const Appointments = () => {
   const doctors = [...new Set(appointments.map(apt => apt.doctorName))];
 
   const handleCreateAppointment = () => {
-    navigate('/appointments/create');
+    setIsModalOpen(true);
   };
 
   const handleMoveAppointment = (id: string, roomId: string, hour: number, minutes: number) => {
