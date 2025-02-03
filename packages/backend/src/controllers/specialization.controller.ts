@@ -6,11 +6,10 @@ import { logger } from '../config/logger';
 export class SpecializationController {
   static async getAllSpecializations(req: Request, res: Response) {
     try {
-      const specializations = await Specialization.find().populate({
-        path: 'treatments',
-        model: Treatment,
-        select: 'name description duration price'
-      });
+      const specializations = await Specialization.find()
+        .populate('treatments')
+        .exec();
+      
       
       return res.status(200).json({
         status: 'success',
@@ -29,11 +28,9 @@ export class SpecializationController {
 
   static async getSpecializationById(req: Request, res: Response) {
     try {
-      const specialization = await Specialization.findById(req.params.id).populate({
-        path: 'treatments',
-        model: Treatment,
-        select: 'name description duration price'
-      });
+      const specialization = await Specialization.findById(req.params.id)
+        .populate('treatments')
+        .exec();
       
       if (!specialization) {
         return res.status(404).json({
@@ -90,7 +87,9 @@ export class SpecializationController {
       }
 
       const { id } = req.params;
-      const specialization = await Specialization.findByIdAndUpdate(id, req.body, { new: true });
+      const specialization = await Specialization.findByIdAndUpdate(id, req.body, { new: true })
+        .populate('treatments')
+        .exec();
       
       if (!specialization) {
         return res.status(404).json({
@@ -122,9 +121,9 @@ export class SpecializationController {
       }
 
       const { id } = req.params;
-      const success = await Specialization.findByIdAndDelete(id);
+      const specialization = await Specialization.findByIdAndDelete(id);
       
-      if (!success) {
+      if (!specialization) {
         return res.status(404).json({
           status: 'error',
           message: 'Specialization not found'

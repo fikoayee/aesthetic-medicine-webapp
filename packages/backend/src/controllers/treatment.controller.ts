@@ -189,4 +189,27 @@ export class TreatmentController {
       });
     }
   }
+
+  static async getTreatmentsBySpecializationId(req: Request, res: Response) {
+    try {
+      const { specializationId } = req.params;
+      
+      const treatments = await Treatment.find({ 
+        specialization: new Types.ObjectId(specializationId) 
+      });
+      
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          treatments
+        }
+      });
+    } catch (error) {
+      logger.error('Get treatments by specialization error:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Failed to get treatments'
+      });
+    }
+  }
 }

@@ -32,6 +32,16 @@ export interface SingleTreatmentResponse {
   };
 }
 
+export interface ApiResponse<T> {
+  status: string;
+  message: string;
+  data: T;
+}
+
+export interface TreatmentsResponse {
+  treatments: Treatment[];
+}
+
 export const treatmentService = {
   async getAllTreatments() {
     const response = await axiosInstance.get<TreatmentResponse>('/treatments');
@@ -55,5 +65,18 @@ export const treatmentService = {
 
   async deleteTreatment(id: string) {
     await axiosInstance.delete(`/treatments/${id}`);
-  }
+  },
+
+  async getTreatmentsBySpecializationId(specializationId: string): Promise<Treatment[]> {
+    try {
+      const response = await axiosInstance.get<ApiResponse<TreatmentsResponse>>(`/treatments/specialization/${specializationId}`);
+      if (response.data.status !== 'success') {
+        throw new Error(response.data.message);
+      }
+      return response.data.data.treatments;
+    } catch (error) {
+      console.error('Error in getTreatmentsBySpecializationId:', error);
+      throw error;
+    }
+  },
 };

@@ -10,6 +10,7 @@ router.use(authenticate);
 
 // Routes accessible by all authenticated users
 router.get('/', authenticate,TreatmentController.getAllTreatments);
+router.get('/specialization/:specializationId', authenticate, TreatmentController.getTreatmentsBySpecializationId);
 router.get('/:id', authenticate, TreatmentController.getTreatmentById);
 
 // Routes that require ADMIN role

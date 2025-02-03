@@ -17,6 +17,7 @@ import {
   MedicalServices as TreatmentsIcon,
   Room as RoomsIcon,
   Settings as SettingsIcon,
+  Psychology as SpecializationsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -36,6 +37,7 @@ const Sidebar = () => {
     { text: 'Patients', icon: <PeopleIcon />, path: '/patients' },
     { text: 'Doctors', icon: <DoctorsIcon />, path: '/doctors' },
     { text: 'Treatments', icon: <TreatmentsIcon />, path: '/treatments' },
+    { text: 'Specializations', icon: <SpecializationsIcon />, path: '/specializations' },
     { text: 'Rooms', icon: <RoomsIcon />, path: '/rooms' },
   ];
 

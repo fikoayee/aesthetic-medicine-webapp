@@ -9,6 +9,7 @@ import Patients from '../pages/Patients';
 import Profile from '../pages/Profile';
 import Appointments from '../pages/Appointments';
 import CreateAppointment from '../pages/Appointments/CreateAppointment';
+import Specializations from '../pages/Specializations';
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -106,6 +107,15 @@ export const AppRoutes = () => {
           element={
             <PrivateRoute>
               <Profile />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/specializations"
+          element={
+            <PrivateRoute>
+              <Specializations />
             </PrivateRoute>
           }
         />
