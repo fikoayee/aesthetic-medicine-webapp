@@ -1,10 +1,44 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Paper, Typography, Tooltip, Button } from '@mui/material';
-import { format, parseISO } from 'date-fns';
+import { 
+  Box, 
+  Paper, 
+  Typography, 
+  Tooltip, 
+  Button, 
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Tabs,
+  Tab,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format, parseISO, isSameDay, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { useDrag, useDrop } from 'react-dnd';
 import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import EventIcon from '@mui/icons-material/Event';
+import InfoIcon from '@mui/icons-material/Info';
+import InputAdornment from '@mui/material/InputAdornment';
 import AppointmentModal from '../../components/AppointmentModal';
 
 // Constants
@@ -15,6 +49,32 @@ const SLOT_HEIGHT = 120; // 120px height for each hour slot
 const ItemTypes = {
   APPOINTMENT: 'appointment'
 };
+
+const APPOINTMENT_STATUS = {
+  SCHEDULED: 'scheduled',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled',
+  NO_SHOW: 'no_show'
+} as const;
+
+type AppointmentStatus = typeof APPOINTMENT_STATUS[keyof typeof APPOINTMENT_STATUS];
+
+const STATUS_COLORS = {
+  [APPOINTMENT_STATUS.SCHEDULED]: 'info',
+  [APPOINTMENT_STATUS.IN_PROGRESS]: 'warning',
+  [APPOINTMENT_STATUS.COMPLETED]: 'success',
+  [APPOINTMENT_STATUS.CANCELLED]: 'error',
+  [APPOINTMENT_STATUS.NO_SHOW]: 'error'
+} as const;
+
+const STATUS_LABELS = {
+  [APPOINTMENT_STATUS.SCHEDULED]: 'Scheduled',
+  [APPOINTMENT_STATUS.IN_PROGRESS]: 'In Progress',
+  [APPOINTMENT_STATUS.COMPLETED]: 'Completed',
+  [APPOINTMENT_STATUS.CANCELLED]: 'Cancelled',
+  [APPOINTMENT_STATUS.NO_SHOW]: 'No Show'
+} as const;
 
 const ROOMS = [
   { id: '1', name: 'Room 1' },
@@ -30,41 +90,69 @@ const MOCK_APPOINTMENTS = [
   {
     id: '1',
     patientName: 'Anna Smith',
+    patientEmail: 'anna.smith@email.com',
+    patientPhone: '+1 234-567-8901',
     treatmentName: 'Quick Checkup',
+    treatmentDuration: '15 min',
+    treatmentPrice: '$50',
     doctorName: 'Dr. Brown',
+    doctorSpecialty: 'General',
     startTime: '2025-02-02T09:00:00',
-    endTime: '2025-02-02T09:15:00',  // 15 min
+    endTime: '2025-02-02T09:15:00',
     roomId: '1',
+    status: APPOINTMENT_STATUS.SCHEDULED,
+    notes: 'First time patient',
     color: '#4CAF50'
   },
   {
     id: '2',
     patientName: 'John Doe',
+    patientEmail: 'john.doe@email.com',
+    patientPhone: '+1 234-567-8902',
     treatmentName: 'Dental Cleaning',
+    treatmentDuration: '30 min',
+    treatmentPrice: '$100',
     doctorName: 'Dr. White',
+    doctorSpecialty: 'Dental',
     startTime: '2025-02-02T10:00:00',
-    endTime: '2025-02-02T10:30:00',  // 30 min
+    endTime: '2025-02-02T10:30:00',
     roomId: '2',
+    status: APPOINTMENT_STATUS.IN_PROGRESS,
+    notes: 'Regular checkup',
     color: '#2196F3'
   },
   {
     id: '3',
     patientName: 'Mary Johnson',
+    patientEmail: 'mary.j@email.com',
+    patientPhone: '+1 234-567-8903',
     treatmentName: 'Root Canal',
+    treatmentDuration: '45 min',
+    treatmentPrice: '$300',
     doctorName: 'Dr. Green',
+    doctorSpecialty: 'Dental Surgery',
     startTime: '2025-02-02T11:00:00',
-    endTime: '2025-02-02T11:45:00',  // 45 min
+    endTime: '2025-02-02T11:45:00',
     roomId: '3',
+    status: APPOINTMENT_STATUS.COMPLETED,
+    notes: 'Follow-up needed in 2 weeks',
     color: '#FF9800'
   },
   {
     id: '4',
     patientName: 'James Wilson',
+    patientEmail: 'j.wilson@email.com',
+    patientPhone: '+1 234-567-8904',
     treatmentName: 'Full Checkup',
+    treatmentDuration: '1 hour',
+    treatmentPrice: '$200',
     doctorName: 'Dr. Black',
+    doctorSpecialty: 'General',
     startTime: '2025-02-02T13:00:00',
-    endTime: '2025-02-02T14:00:00',  // 1 hour
+    endTime: '2025-02-02T14:00:00',
     roomId: '4',
+    status: APPOINTMENT_STATUS.CANCELLED,
+    notes: 'Rescheduling needed',
     color: '#9C27B0'
   }
 ];
@@ -323,7 +411,20 @@ const TimeSlot = ({
 const Appointments = () => {
   const [appointments, setAppointments] = useState(MOCK_APPOINTMENTS);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [dateRange, setDateRange] = useState<{start: Date | null, end: Date | null}>({
+    start: null,
+    end: null
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all');
+  const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
+  const [selectedAppointment, setSelectedAppointment] = useState<typeof MOCK_APPOINTMENTS[0] | null>(null);
+  const [view, setView] = useState<'list' | 'calendar'>('list');
   const navigate = useNavigate();
+
+  // Get unique doctors from appointments
+  const doctors = [...new Set(appointments.map(apt => apt.doctorName))];
 
   const handleCreateAppointment = () => {
     navigate('/appointments/create');
@@ -353,44 +454,335 @@ const Appointments = () => {
     });
   };
 
-  const handleModalSuccess = () => {
-    // Refresh appointments data
-    // For now using mock data, but in real app would fetch from API
-    setAppointments(MOCK_APPOINTMENTS);
-  };
+  // Filter appointments based on all criteria
+  const filteredAppointments = appointments.filter(apt => {
+    const matchesSearch = searchQuery === '' || 
+      apt.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      apt.treatmentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      apt.doctorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      apt.patientEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      apt.patientPhone.includes(searchQuery);
 
-  const timeSlots = Array.from({ length: END_HOUR - START_HOUR }, (_, index) => {
-    return START_HOUR + index;
+    const matchesStatus = statusFilter === 'all' || apt.status === statusFilter;
+    
+    const matchesDoctors = selectedDoctors.length === 0 || selectedDoctors.includes(apt.doctorName);
+
+    const matchesDateRange = !dateRange.start || !dateRange.end ? true :
+      isWithinInterval(parseISO(apt.startTime), {
+        start: startOfDay(dateRange.start),
+        end: endOfDay(dateRange.end)
+      });
+
+    const matchesDate = selectedDate && view === 'calendar' ? 
+      isSameDay(parseISO(apt.startTime), selectedDate) : 
+      true;
+
+    return matchesSearch && matchesDate && matchesStatus && matchesDoctors && matchesDateRange;
   });
 
-  return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Appointments Schedule</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => setIsModalOpen(true)}
-        >
-          Create Appointment
-        </Button>
-      </Box>
+  const handleAppointmentClick = (appointment: typeof MOCK_APPOINTMENTS[0]) => {
+    setSelectedDate(parseISO(appointment.startTime));
+    setView('calendar');
+  };
 
-      <Paper sx={{ overflowX: 'auto' }}>
-        <Box sx={{ display: 'flex', minWidth: 'fit-content' }}>
-          {/* Time Column - Sticky on X axis */}
+  const handleOpenDetails = (appointment: typeof MOCK_APPOINTMENTS[0]) => {
+    setSelectedAppointment(appointment);
+  };
+
+  const renderAppointmentDetails = () => {
+    if (!selectedAppointment) return null;
+
+    return (
+      <Dialog 
+        open={!!selectedAppointment} 
+        onClose={() => setSelectedAppointment(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Appointment Details
+          <Chip 
+            label={STATUS_LABELS[selectedAppointment.status]}
+            size="small"
+            color={STATUS_COLORS[selectedAppointment.status]}
+            sx={{ ml: 1 }}
+          />
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 2, py: 2 }}>
+            <Typography color="text.secondary">Date & Time:</Typography>
+            <Typography>
+              {format(parseISO(selectedAppointment.startTime), 'PPP p')} - {' '}
+              {format(parseISO(selectedAppointment.endTime), 'p')}
+            </Typography>
+
+            <Typography color="text.secondary">Patient:</Typography>
+            <Box>
+              <Typography>{selectedAppointment.patientName}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedAppointment.patientEmail}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedAppointment.patientPhone}
+              </Typography>
+            </Box>
+
+            <Typography color="text.secondary">Treatment:</Typography>
+            <Box>
+              <Typography>{selectedAppointment.treatmentName}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Duration: {selectedAppointment.treatmentDuration}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Price: {selectedAppointment.treatmentPrice}
+              </Typography>
+            </Box>
+
+            <Typography color="text.secondary">Doctor:</Typography>
+            <Box>
+              <Typography>{selectedAppointment.doctorName}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedAppointment.doctorSpecialty}
+              </Typography>
+            </Box>
+
+            <Typography color="text.secondary">Room:</Typography>
+            <Typography>
+              {ROOMS.find(r => r.id === selectedAppointment.roomId)?.name}
+            </Typography>
+
+            <Typography color="text.secondary">Notes:</Typography>
+            <Typography>{selectedAppointment.notes}</Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleAppointmentClick(selectedAppointment)}>
+            View in Calendar
+          </Button>
+          <Button onClick={() => setSelectedAppointment(null)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
+  const renderAppointmentPreview = (appointment: typeof MOCK_APPOINTMENTS[0]) => (
+    <Box sx={{ p: 1 }}>
+      <Typography variant="subtitle2" gutterBottom>
+        {appointment.patientName}
+      </Typography>
+      <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: 1, fontSize: '0.875rem' }}>
+        <Typography color="text.secondary">Email:</Typography>
+        <Typography>{appointment.patientEmail}</Typography>
+        
+        <Typography color="text.secondary">Phone:</Typography>
+        <Typography>{appointment.patientPhone}</Typography>
+        
+        <Typography color="text.secondary">Treatment:</Typography>
+        <Typography>{appointment.treatmentName}</Typography>
+        
+        <Typography color="text.secondary">Duration:</Typography>
+        <Typography>{appointment.treatmentDuration}</Typography>
+        
+        <Typography color="text.secondary">Price:</Typography>
+        <Typography>{appointment.treatmentPrice}</Typography>
+        
+        <Typography color="text.secondary">Doctor:</Typography>
+        <Typography>{appointment.doctorName} ({appointment.doctorSpecialty})</Typography>
+        
+        <Typography color="text.secondary">Notes:</Typography>
+        <Typography>{appointment.notes}</Typography>
+      </Box>
+    </Box>
+  );
+
+  const renderListView = () => (
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Date & Time</TableCell>
+            <TableCell>Patient</TableCell>
+            <TableCell>Contact</TableCell>
+            <TableCell>Treatment</TableCell>
+            <TableCell>Price</TableCell>
+            <TableCell>Doctor</TableCell>
+            <TableCell>Room</TableCell>
+            <TableCell>Status</TableCell>
+            <TableCell>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {filteredAppointments
+            .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+            .map((appointment) => (
+              <Tooltip
+                key={appointment.id}
+                title={renderAppointmentPreview(appointment)}
+                placement="top"
+                arrow
+                PopperProps={{
+                  sx: {
+                    '& .MuiTooltip-tooltip': {
+                      maxWidth: 'none',
+                      position: 'fixed',
+                      left: '50% !important',
+                      transform: 'translateX(-50%) translateY(0) !important',
+                      zIndex: 9999
+                    },
+                    '& .MuiTooltip-arrow': {
+                      left: '50% !important',
+                      transform: 'translateX(-50%) !important'
+                    }
+                  }
+                }}
+              >
+                <TableRow 
+                  hover
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => handleOpenDetails(appointment)}
+                >
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <EventIcon fontSize="small" color="action" />
+                      {format(parseISO(appointment.startTime), 'MMM d, yyyy h:mm a')}
+                    </Box>
+                  </TableCell>
+                  <TableCell>{appointment.patientName}</TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2">{appointment.patientEmail}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {appointment.patientPhone}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2">{appointment.treatmentName}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {appointment.treatmentDuration}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>{appointment.treatmentPrice}</TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2">{appointment.doctorName}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {appointment.doctorSpecialty}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={ROOMS.find(r => r.id === appointment.roomId)?.name} 
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={STATUS_LABELS[appointment.status]}
+                      size="small"
+                      color={STATUS_COLORS[appointment.status]}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Tooltip title="View Details">
+                        <IconButton 
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDetails(appointment);
+                          }}
+                        >
+                          <InfoIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="View in Calendar">
+                        <IconButton 
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAppointmentClick(appointment);
+                          }}
+                        >
+                          <CalendarMonthIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              </Tooltip>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
+  const renderCalendarView = () => (
+    <Paper sx={{ overflowX: 'auto' }}>
+      <Box sx={{ display: 'flex', minWidth: 'fit-content' }}>
+        {/* Time Column */}
+        <Box sx={{ 
+          width: 80, 
+          flexShrink: 0, 
+          borderRight: 1, 
+          borderColor: 'divider',
+          bgcolor: 'grey.100',
+          position: 'sticky',
+          left: 0,
+          zIndex: 3,
+        }}>
           <Box sx={{ 
-            width: 80, 
-            flexShrink: 0, 
-            borderRight: 1, 
+            height: 50, 
+            borderBottom: 1, 
             borderColor: 'divider',
-            bgcolor: 'grey.100',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 'bold',
+            bgcolor: 'background.paper',
             position: 'sticky',
-            left: 0,
-            zIndex: 3,
+            top: 0,
+            zIndex: 4,
           }}>
-            {/* Time Header - Sticky on both X and Y axes */}
+            Time
+          </Box>
+
+          {Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i).map((hour) => (
+            <Box
+              key={hour}
+              sx={{
+                height: SLOT_HEIGHT,
+                borderBottom: 1,
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.875rem',
+              }}
+            >
+              {format(new Date().setHours(hour, 0, 0), 'h a')}
+            </Box>
+          ))}
+        </Box>
+
+        {/* Room Columns */}
+        {ROOMS.map((room) => (
+          <Box
+            key={room.id}
+            sx={{
+              flex: 1,
+              minWidth: 200,
+              borderRight: 1,
+              borderColor: 'divider',
+              position: 'relative',
+            }}
+          >
             <Box sx={{ 
               height: 50, 
               borderBottom: 1, 
@@ -399,91 +791,180 @@ const Appointments = () => {
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 'bold',
-              bgcolor: 'background.paper',
+              bgcolor: 'grey.100',
               position: 'sticky',
               top: 0,
-              zIndex: 4,
+              zIndex: 2,
             }}>
-              Time
+              {room.name}
             </Box>
 
-            {/* Time Slots */}
-            {timeSlots.map((hour) => (
-              <Box
-                key={hour}
-                sx={{
-                  height: SLOT_HEIGHT,
-                  borderBottom: 1,
-                  borderColor: 'divider',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.875rem',
-                }}
-              >
-                {`${hour}:00`}
-              </Box>
+            {Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i).map((hour) => (
+              <TimeSlot
+                key={`${room.id}-${hour}`}
+                hour={hour}
+                roomId={room.id}
+                onDrop={handleMoveAppointment}
+              />
             ))}
-          </Box>
 
-          {/* Room Columns */}
-          {ROOMS.map((room) => (
-            <Box
-              key={room.id}
-              sx={{
-                flex: 1,
-                minWidth: 200,
-                borderRight: 1,
-                borderColor: 'divider',
-                position: 'relative',
-              }}
-            >
-              {/* Room Header - Sticky on Y axis */}
-              <Box sx={{ 
-                height: 50, 
-                borderBottom: 1, 
-                borderColor: 'divider',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                bgcolor: 'grey.100',
-                position: 'sticky',
-                top: 0,
-                zIndex: 2,
-              }}>
-                {room.name}
-              </Box>
-
-              {/* Time Slots for Room */}
-              {timeSlots.map((hour) => (
-                <TimeSlot
-                  key={`${room.id}-${hour}`}
-                  hour={hour}
-                  roomId={room.id}
-                  onDrop={handleMoveAppointment}
+            {filteredAppointments
+              .filter(apt => apt.roomId === room.id)
+              .map(appointment => (
+                <AppointmentBlock 
+                  key={appointment.id} 
+                  appointment={appointment}
+                  onMove={handleMoveAppointment}
                 />
               ))}
+          </Box>
+        ))}
+      </Box>
+    </Paper>
+  );
 
-              {/* Appointment Blocks */}
-              {appointments
-                .filter(apt => apt.roomId === room.id)
-                .map(appointment => (
-                  <AppointmentBlock 
-                    key={appointment.id} 
-                    appointment={appointment}
-                    onMove={handleMoveAppointment}
+  return (
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'flex-start', 
+        mb: 3,
+        gap: 2 
+      }}>
+        <Typography variant="h4">Appointments Schedule</Typography>
+        
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <TextField
+              size="small"
+              placeholder="Search appointments..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{ width: 250 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Filter by Doctors</InputLabel>
+              <Select
+                multiple
+                value={selectedDoctors}
+                label="Filter by Doctors"
+                onChange={(e) => setSelectedDoctors(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value} size="small" />
+                    ))}
+                  </Box>
+                )}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 48 * 4.5
+                    },
+                  },
+                }}
+              >
+                {doctors.map(doctor => (
+                  <MenuItem key={doctor} value={doctor}>
+                    {doctor}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <DatePicker
+                  label="Date From"
+                  value={dateRange.start}
+                  onChange={(newValue) => setDateRange(prev => ({ ...prev, start: newValue }))}
+                  slotProps={{ textField: { size: 'small' } }}
+                />
+                <DatePicker
+                  label="Date To"
+                  value={dateRange.end}
+                  onChange={(newValue) => setDateRange(prev => ({ ...prev, end: newValue }))}
+                  slotProps={{ textField: { size: 'small' } }}
+                />
+              </Box>
+            </LocalizationProvider>
+          </Box>
+
+          <Box>
+            <Tooltip title="Filter by Status">
+              <Box>
+                {Object.entries(APPOINTMENT_STATUS).map(([key, value]) => (
+                  <Chip
+                    key={value}
+                    label={STATUS_LABELS[value]}
+                    size="small"
+                    color={statusFilter === value ? STATUS_COLORS[value] : 'default'}
+                    onClick={() => setStatusFilter(statusFilter === value ? 'all' : value)}
+                    sx={{ mr: 0.5, mb: 0.5 }}
                   />
                 ))}
-            </Box>
-          ))}
+              </Box>
+            </Tooltip>
+          </Box>
+          
+          {view === 'calendar' && (
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                value={selectedDate}
+                onChange={(newValue) => setSelectedDate(newValue)}
+                slotProps={{ textField: { size: 'small' } }}
+              />
+            </LocalizationProvider>
+          )}
+
+          <Tabs 
+            value={view} 
+            onChange={(_, newValue) => setView(newValue)}
+            sx={{ minHeight: 40 }}
+          >
+            <Tab 
+              icon={<ListAltIcon />} 
+              value="list" 
+              label="List" 
+              sx={{ minHeight: 40 }}
+            />
+            <Tab 
+              icon={<CalendarMonthIcon />} 
+              value="calendar" 
+              label="Calendar"
+              sx={{ minHeight: 40 }}
+            />
+          </Tabs>
+
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleCreateAppointment}
+          >
+            Create Appointment
+          </Button>
         </Box>
-      </Paper>
+      </Box>
+
+      {view === 'list' ? renderListView() : renderCalendarView()}
+      {renderAppointmentDetails()}
 
       <AppointmentModal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSuccess={handleModalSuccess}
+        onSuccess={() => {
+          setIsModalOpen(false);
+          // Refresh appointments here
+        }}
       />
     </Box>
   );
