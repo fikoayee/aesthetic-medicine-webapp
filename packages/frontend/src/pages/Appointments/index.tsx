@@ -194,25 +194,44 @@ const AppointmentBlock = ({
   return (
     <Tooltip
       title={
-        <div>
-          <div><strong>Patient:</strong> {appointment.patientName}</div>
-          <div><strong>Treatment:</strong> {appointment.treatmentName}</div>
-          <div><strong>Doctor:</strong> {appointment.doctorName}</div>
-          <div><strong>Time:</strong> {format(startTime, 'HH:mm')} - {format(endTime, 'HH:mm')}</div>
-        </div>
+        <Box sx={{ p: 1 }}>
+          <Typography sx={{ fontWeight: 600, color: '#fff', mb: 1 }}>
+            {appointment.treatmentName}
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AccessTimeIcon sx={{ fontSize: 16, color: '#fff' }} />
+              <Typography variant="body2" sx={{ color: '#fff' }}>
+                {format(startTime, 'h:mm a')} - {format(endTime, 'h:mm a')}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <PersonIcon sx={{ fontSize: 16, color: '#fff' }} />
+              <Typography variant="body2" sx={{ color: '#fff' }}>
+                {appointment.patientName}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LocalHospitalIcon sx={{ fontSize: 16, color: '#fff' }} />
+              <Typography variant="body2" sx={{ color: '#fff' }}>
+                {appointment.doctorName}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
       }
-      arrow
       placement="right"
+      arrow
       PopperProps={{
         sx: {
           '& .MuiTooltip-tooltip': {
-            bgcolor: '#ffffff',
-            color: '#04070b',
-            p: 0,
+            bgcolor: alpha('#306ad0', 0.95),
+            borderRadius: '8px',
+            p: 1,
             maxWidth: 'none',
           },
           '& .MuiTooltip-arrow': {
-            color: '#ffffff',
+            color: alpha('#306ad0', 0.95),
           },
         },
       }}
@@ -681,200 +700,323 @@ const Appointments = () => {
 
   const renderAppointmentPreview = (appointment: typeof MOCK_APPOINTMENTS[0]) => (
     <Paper sx={{ 
-      p: 2,
-      bgcolor: '#ffffff',
-      borderRadius: '8px',
-      width: 320,
-      boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+      p: 2.5,
+      maxWidth: 400,
+      borderRadius: '12px',
+      bgcolor: 'rgba(255, 255, 255, 0.98)',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
     }}>
-      <Box sx={{ mb: 2, pb: 2, borderBottom: '2px solid #306ad0' }}>
-        <Typography variant="subtitle1" sx={{ color: '#04070b', fontWeight: 600, mb: 1 }}>
-          {appointment.patientName}
-        </Typography>
-        <Chip 
-          label={STATUS_LABELS[appointment.status]}
-          size="small"
-          color={STATUS_COLORS[appointment.status]}
-          sx={{ 
-            borderRadius: '6px',
-            '& .MuiChip-label': {
-              fontWeight: 500,
-            },
-          }}
-        />
-      </Box>
-      
-      <Box sx={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'auto 1fr', 
-        gap: 1.5,
-        '& .MuiTypography-root': {
-          fontSize: '0.875rem',
-          lineHeight: 1.5,
-        }
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <EventIcon sx={{ color: '#306ad0', fontSize: '1rem' }} />
-          <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Time:</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Box sx={{ 
+          width: 40, 
+          height: 40, 
+          borderRadius: '10px',
+          bgcolor: alpha('#306ad0', 0.1),
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <EventIcon sx={{ color: '#306ad0' }} />
         </Box>
-        <Typography sx={{ color: '#04070b' }}>
-          {format(parseISO(appointment.startTime), 'h:mm a')} - {format(parseISO(appointment.endTime), 'h:mm a')}
-        </Typography>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <LocalHospitalIcon sx={{ color: '#306ad0', fontSize: '1rem' }} />
-          <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Treatment:</Typography>
-        </Box>
-        <Typography sx={{ color: '#04070b' }}>{appointment.treatmentName}</Typography>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <AccessTimeIcon sx={{ color: '#306ad0', fontSize: '1rem' }} />
-          <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Duration:</Typography>
-        </Box>
-        <Typography sx={{ color: '#04070b' }}>{appointment.treatmentDuration}</Typography>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <PersonIcon sx={{ color: '#306ad0', fontSize: '1rem' }} />
-          <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Doctor:</Typography>
-        </Box>
-        <Typography sx={{ color: '#04070b' }}>
-          {appointment.doctorName}
-          <Typography component="span" sx={{ color: '#04070b', opacity: 0.7, ml: 0.5 }}>
-            ({appointment.doctorSpecialty})
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: '#04070b', mb: 0.5 }}>
+            {appointment.treatmentName}
           </Typography>
-        </Typography>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <MeetingRoomIcon sx={{ color: '#306ad0', fontSize: '1rem' }} />
-          <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Room:</Typography>
+          <Chip 
+            label={STATUS_LABELS[appointment.status]}
+            size="small"
+            color={STATUS_COLORS[appointment.status]}
+            sx={{ 
+              borderRadius: '6px',
+              height: 24,
+              '& .MuiChip-label': { fontWeight: 500 }
+            }}
+          />
         </Box>
-        <Typography sx={{ color: '#04070b' }}>
-          {ROOMS.find(r => r.id === appointment.roomId)?.name}
-        </Typography>
+      </Box>
+
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={6}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
+            <AccessTimeIcon sx={{ fontSize: 20, color: '#306ad0' }} />
+            <Typography variant="body2" sx={{ color: '#666' }}>
+              Time
+            </Typography>
+          </Box>
+          <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
+            {format(parseISO(appointment.startTime), 'h:mm a')} - {format(parseISO(appointment.endTime), 'h:mm a')}
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
+            {format(parseISO(appointment.startTime), 'MMM d, yyyy')}
+          </Typography>
+        </Grid>
+        <Grid item xs={6}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
+            <MeetingRoomIcon sx={{ fontSize: 20, color: '#306ad0' }} />
+            <Typography variant="body2" sx={{ color: '#666' }}>
+              Room
+            </Typography>
+          </Box>
+          <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
+            {ROOMS.find(r => r.id === appointment.roomId)?.name}
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
+            {appointment.treatmentDuration}
+          </Typography>
+        </Grid>
+      </Grid>
+
+      <Box sx={{ 
+        p: 2, 
+        bgcolor: alpha('#306ad0', 0.04), 
+        borderRadius: '8px',
+        display: 'flex',
+        gap: 2
+      }}>
+        <Box sx={{ flex: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+            <PersonIcon sx={{ fontSize: 20, color: '#306ad0' }} />
+            <Typography variant="body2" sx={{ color: '#666' }}>
+              Patient
+            </Typography>
+          </Box>
+          <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
+            {appointment.patientName}
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
+            {appointment.patientPhone}
+          </Typography>
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+            <LocalHospitalIcon sx={{ fontSize: 20, color: '#306ad0' }} />
+            <Typography variant="body2" sx={{ color: '#666' }}>
+              Doctor
+            </Typography>
+          </Box>
+          <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
+            {appointment.doctorName}
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
+            {appointment.doctorSpecialty}
+          </Typography>
+        </Box>
       </Box>
     </Paper>
   );
 
   const renderListView = () => (
-    <TableContainer component={Paper}>
+    <TableContainer 
+      component={Paper} 
+      sx={{ 
+        borderRadius: '16px',
+        overflow: 'hidden',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+        '& .MuiTableCell-root': {
+          borderColor: 'rgba(0,0,0,0.05)',
+        },
+      }}
+    >
       <Table>
         <TableHead>
-          <TableRow>
-            <TableCell>Date & Time</TableCell>
-            <TableCell>Patient</TableCell>
-            <TableCell>Contact</TableCell>
-            <TableCell>Treatment</TableCell>
+          <TableRow sx={{ 
+            bgcolor: '#f8fafd',
+            '& th': { 
+              fontWeight: 600,
+              color: '#04070b',
+              py: 2,
+            },
+          }}>
+            <TableCell>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AccessTimeIcon fontSize="small" sx={{ color: '#306ad0' }} />
+                Date & Time
+              </Box>
+            </TableCell>
+            <TableCell>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <PersonIcon fontSize="small" sx={{ color: '#306ad0' }} />
+                Patient
+              </Box>
+            </TableCell>
+            <TableCell>Contact Info</TableCell>
+            <TableCell>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <LocalHospitalIcon fontSize="small" sx={{ color: '#306ad0' }} />
+                Treatment
+              </Box>
+            </TableCell>
             <TableCell>Price</TableCell>
-            <TableCell>Doctor</TableCell>
-            <TableCell>Room</TableCell>
+            <TableCell>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <PersonIcon fontSize="small" sx={{ color: '#306ad0' }} />
+                Doctor
+              </Box>
+            </TableCell>
+            <TableCell>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <MeetingRoomIcon fontSize="small" sx={{ color: '#306ad0' }} />
+                Room
+              </Box>
+            </TableCell>
             <TableCell>Status</TableCell>
-            <TableCell>Actions</TableCell>
+            <TableCell align="center">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredAppointments
-            .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-            .map((appointment) => (
-              <Tooltip
-                key={appointment.id}
-                title={renderAppointmentPreview(appointment)}
-                placement="top"
-                arrow
-                PopperProps={{
-                  sx: {
-                    '& .MuiTooltip-tooltip': {
-                      maxWidth: 'none',
-                      position: 'fixed',
-                      left: '50% !important',
-                      transform: 'translateX(-50%) translateY(0) !important',
-                      zIndex: 9999
+          {filteredAppointments.map((appointment) => (
+            <Tooltip
+              key={appointment.id}
+              title={renderAppointmentPreview(appointment)}
+              placement="right"
+              arrow
+              PopperProps={{
+                sx: {
+                  '& .MuiTooltip-tooltip': {
+                    bgcolor: 'transparent',
+                    p: 0,
+                  },
+                  '& .MuiTooltip-arrow': {
+                    color: 'rgba(255, 255, 255, 0.98)',
+                    '&::before': {
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
                     },
-                    '& .MuiTooltip-arrow': {
-                      left: '50% !important',
-                      transform: 'translateX(-50%) !important'
-                    }
-                  }
+                  },
+                },
+              }}
+            >
+              <TableRow
+                hover
+                sx={{ 
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: alpha('#306ad0', 0.04),
+                  },
                 }}
+                onClick={() => handleOpenDetails(appointment)}
               >
-                <TableRow 
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => handleOpenDetails(appointment)}
-                >
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <EventIcon fontSize="small" color="action" />
-                      {format(parseISO(appointment.startTime), 'MMM d, yyyy h:mm a')}
-                    </Box>
-                  </TableCell>
-                  <TableCell>{appointment.patientName}</TableCell>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body2">{appointment.patientEmail}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {appointment.patientPhone}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body2">{appointment.treatmentName}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {appointment.treatmentDuration}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>{appointment.treatmentPrice}</TableCell>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body2">{appointment.doctorName}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {appointment.doctorSpecialty}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={ROOMS.find(r => r.id === appointment.roomId)?.name} 
-                      size="small"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={STATUS_LABELS[appointment.status]}
-                      size="small"
-                      color={STATUS_COLORS[appointment.status]}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Tooltip title="View Details">
-                        <IconButton 
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenDetails(appointment);
-                          }}
-                        >
-                          <InfoIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="View in Calendar">
-                        <IconButton 
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAppointmentClick(appointment);
-                          }}
-                        >
-                          <CalendarMonthIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              </Tooltip>
+                <TableCell>
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
+                      {format(parseISO(appointment.startTime), 'MMM d, yyyy')}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666' }}>
+                      {format(parseISO(appointment.startTime), 'h:mm a')} - {format(parseISO(appointment.endTime), 'h:mm a')}
+                    </Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
+                    {appointment.patientName}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Box>
+                    <Typography variant="body2" sx={{ color: '#04070b' }}>
+                      {appointment.patientEmail}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666' }}>
+                      {appointment.patientPhone}
+                    </Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
+                      {appointment.treatmentName}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666' }}>
+                      {appointment.treatmentDuration}
+                    </Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
+                    {appointment.treatmentPrice}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
+                      {appointment.doctorName}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666' }}>
+                      {appointment.doctorSpecialty}
+                    </Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Chip 
+                    label={ROOMS.find(r => r.id === appointment.roomId)?.name} 
+                    size="small"
+                    variant="outlined"
+                    sx={{ 
+                      borderRadius: '6px',
+                      bgcolor: alpha('#306ad0', 0.1),
+                      borderColor: 'transparent',
+                      color: '#306ad0',
+                      fontWeight: 500,
+                    }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Chip 
+                    label={STATUS_LABELS[appointment.status]}
+                    size="small"
+                    color={STATUS_COLORS[appointment.status]}
+                    sx={{ 
+                      borderRadius: '6px',
+                      '& .MuiChip-label': {
+                        fontWeight: 500,
+                      },
+                    }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 1,
+                    justifyContent: 'center',
+                  }}>
+                    <Tooltip title="View Details">
+                      <IconButton 
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDetails(appointment);
+                        }}
+                        sx={{
+                          color: '#306ad0',
+                          '&:hover': {
+                            bgcolor: alpha('#306ad0', 0.1),
+                          },
+                        }}
+                      >
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="View in Calendar">
+                      <IconButton 
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAppointmentClick(appointment);
+                        }}
+                        sx={{
+                          color: '#306ad0',
+                          '&:hover': {
+                            bgcolor: alpha('#306ad0', 0.1),
+                          },
+                        }}
+                      >
+                        <CalendarMonthIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            </Tooltip>
           ))}
         </TableBody>
       </Table>
