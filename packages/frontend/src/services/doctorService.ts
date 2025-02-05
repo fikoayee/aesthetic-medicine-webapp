@@ -47,13 +47,17 @@ interface ApiResponse<T> {
   data: T;
 }
 
-interface DoctorsResponse {
-  doctors: Doctor[];
-}
-
 const getAllDoctors = async (): Promise<Doctor[]> => {
-  const response = await axiosInstance.get<ApiResponse<DoctorsResponse>>('/doctors');
-  return response.data.data.doctors;
+  try {
+    const response = await axiosInstance.get<ApiResponse<Doctor[]>>('/doctors');
+    console.log('Doctor service - Raw API response:', response);
+    console.log('Doctor service - Response data:', response.data);
+    console.log('Doctor service - Doctors array:', response.data.data);
+    return response.data.data || [];
+  } catch (error) {
+    console.error('Doctor service - Error fetching doctors:', error);
+    throw error;
+  }
 };
 
 const getDoctorById = async (id: string): Promise<Doctor> => {

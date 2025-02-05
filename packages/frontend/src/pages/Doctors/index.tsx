@@ -102,7 +102,15 @@ const Doctors = () => {
   }, [doctors, searchQuery, selectedSpecializations, selectedDays]);
 
   const filterDoctors = () => {
+    console.log('Starting filterDoctors with doctors:', doctors);
+    
+    if (!Array.isArray(doctors)) {
+      console.error('Doctors data is not in the expected format');
+      return;
+    }
+
     let filtered = [...doctors];
+    console.log('Initial filtered array:', filtered);
 
     // Filter by search query (name)
     if (searchQuery) {
@@ -112,39 +120,73 @@ const Doctors = () => {
           doctor.firstName.toLowerCase().includes(query) ||
           doctor.lastName.toLowerCase().includes(query)
       );
+      console.log('After name filter:', filtered);
     }
 
     // Filter by specializations
     if (selectedSpecializations.length > 0) {
+      console.log('Selected specializations:', selectedSpecializations);
       filtered = filtered.filter(doctor =>
         doctor.specializations.some(spec => 
           selectedSpecializations.includes(spec._id)
         )
       );
+      console.log('After specialization filter:', filtered);
     }
 
-    // Filter by working days (must work on ALL selected days)
+    // Filter by working days
     if (selectedDays.length > 0) {
+      console.log('Selected days:', selectedDays);
       filtered = filtered.filter(doctor => 
         selectedDays.every(day => {
-          const workingDay = doctor.workingDays instanceof Map 
-            ? doctor.workingDays.get(day)
-            : doctor.workingDays[day];
-          return workingDay?.isWorking;
+          const workingDays = doctor.workingDays;
+          console.log('Working days for doctor:', doctor.firstName, workingDays);
+          const workingDay = workingDays instanceof Map
+            ? workingDays.get(day)
+            : workingDays[day];
+          console.log('Working day for', day, ':', workingDay);
+          return workingDay?.isWorking ?? false;
         })
       );
+      console.log('After working days filter:', filtered);
     }
 
+    console.log('Final filtered doctors:', filtered);
     setFilteredDoctors(filtered);
   };
 
   const fetchDoctors = async () => {
     try {
       const data = await doctorService.getAllDoctors();
-      setDoctors(data);
+      console.log('Raw doctors data:', data);
+      
+      if (!Array.isArray(data)) {
+        console.error('Expected doctors data to be an array');
+        return;
+      }
+
+      // Convert workingDays to the expected format if needed
+      const formattedData = data.map(doctor => {
+        console.log('Processing doctor:', doctor);
+        const formattedDoctor = {
+          ...doctor,
+          workingDays: doctor.workingDays instanceof Map 
+            ? doctor.workingDays 
+            : typeof doctor.workingDays === 'object' && doctor.workingDays !== null
+              ? new Map(Object.entries(doctor.workingDays))
+              : new Map()
+        };
+        console.log('Formatted doctor:', formattedDoctor);
+        return formattedDoctor;
+      });
+      
+      console.log('Formatted doctors data:', formattedData);
+      setDoctors(formattedData);
+      setFilteredDoctors(formattedData);
     } catch (error) {
-      toast.error('Failed to fetch doctors');
       console.error('Error fetching doctors:', error);
+      setDoctors([]);
+      setFilteredDoctors([]);
     }
   };
 
