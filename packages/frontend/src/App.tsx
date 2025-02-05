@@ -8,32 +8,36 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <DndProvider backend={HTML5Backend}>
-        <BrowserRouter>
-          <AuthProvider>
-            <Layout>
-              <AppRoutes />
-            </Layout>
-            <ToastContainer
-              position="top-right"
-              autoClose={3000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="light"
-            />
-          </AuthProvider>
-        </BrowserRouter>
-      </DndProvider>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <CssBaseline />
+        <DndProvider backend={HTML5Backend}>
+          <BrowserRouter>
+            <AuthProvider>
+              <Layout>
+                <AppRoutes />
+              </Layout>
+              <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+              />
+            </AuthProvider>
+          </BrowserRouter>
+        </DndProvider>
+      </LocalizationProvider>
     </ThemeProvider>
   );
 }

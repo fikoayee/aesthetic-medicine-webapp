@@ -1,8 +1,131 @@
 import { Box, Typography, Grid, Paper } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import {
+  Box as MuiBox,
+  Card,
+  CardContent,
+  Grid as MuiGrid,
+  Typography as MuiTypography,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Avatar,
+  Chip,
+  Divider,
+  Paper as MuiPaper,
+} from '@mui/material';
+import {
+  Person as PersonIcon,
+  MedicalServices as TreatmentIcon,
+  AccessTime as TimeIcon,
+} from '@mui/icons-material';
+import { format, isSameDay } from 'date-fns';
+import { toast } from 'react-toastify';
+import { appointmentService } from '../../services/appointmentService';
+import { Appointment } from '../../types/appointment';
+
+function getStatusColor(status: string) {
+  switch (status) {
+    case 'booked':
+      return 'primary';
+    case 'ongoing':
+      return 'warning';
+    case 'canceled':
+      return 'error';
+    default:
+      return 'default';
+  }
+}
 
 const Dashboard = () => {
+  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.role === 'DOCTOR') {
+      fetchDoctorAppointments();
+    }
+  }, [user]);
+
+  const fetchDoctorAppointments = async () => {
+    try {
+      if (!user?._id) return;
+
+      const appointments = await appointmentService.getDoctorAppointments(user._id);
+      const today = new Date();
+      const todayAppts = appointments.filter(app => 
+        isSameDay(new Date(app.startTime), today)
+      );
+      setTodayAppointments(todayAppts);
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      toast.error('Failed to load appointments');
+    }
+  };
+
+  const DoctorAppointmentsSection = () => (
+    <Card sx={{ mb: 3 }}>
+      <CardContent>
+        <MuiTypography variant="h6" gutterBottom>
+          Today's Appointments
+        </MuiTypography>
+        {todayAppointments.length === 0 ? (
+          <MuiTypography color="textSecondary" align="center">
+            No appointments today
+          </MuiTypography>
+        ) : (
+          <List disablePadding>
+            {todayAppointments.map((appointment, index) => (
+              <Box key={appointment._id}>
+                {index > 0 && <Divider />}
+                <ListItem>
+                  <ListItemAvatar>
+                    <Avatar>
+                      <PersonIcon />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <MuiTypography variant="subtitle1">
+                          {appointment.patient.firstName} {appointment.patient.lastName}
+                        </MuiTypography>
+                        <Chip
+                          size="small"
+                          label={appointment.status}
+                          color={getStatusColor(appointment.status)}
+                        />
+                      </Box>
+                    }
+                    secondary={
+                      <Box sx={{ mt: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <TimeIcon fontSize="small" sx={{ mr: 0.5 }} />
+                            <MuiTypography variant="body2">
+                              {format(new Date(appointment.startTime), 'HH:mm')} - {format(new Date(appointment.endTime), 'HH:mm')}
+                            </MuiTypography>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <TreatmentIcon fontSize="small" sx={{ mr: 0.5 }} />
+                            <MuiTypography variant="body2">
+                              {appointment.treatment.name}
+                            </MuiTypography>
+                          </Box>
+                        </Box>
+                      </Box>
+                    }
+                  />
+                </ListItem>
+              </Box>
+            ))}
+          </List>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <Box>
@@ -10,9 +133,15 @@ const Dashboard = () => {
         Welcome back, {user?.firstName}!
       </Typography>
 
-      <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid item xs={12} md={6} lg={3}>
-          <Paper
+      <MuiGrid container spacing={3} sx={{ mt: 2 }}>
+        {user?.role === 'DOCTOR' && (
+          <MuiGrid item xs={12}>
+            <DoctorAppointmentsSection />
+          </MuiGrid>
+        )}
+
+        <MuiGrid item xs={12} md={6} lg={3}>
+          <MuiPaper
             elevation={3}
             sx={{
               p: 3,
@@ -24,15 +153,15 @@ const Dashboard = () => {
               color: 'white',
             }}
           >
-            <Typography variant="h6" gutterBottom>
+            <MuiTypography variant="h6" gutterBottom>
               Today's Appointments
-            </Typography>
-            <Typography variant="h3">0</Typography>
-          </Paper>
-        </Grid>
+            </MuiTypography>
+            <MuiTypography variant="h3">0</MuiTypography>
+          </MuiPaper>
+        </MuiGrid>
 
-        <Grid item xs={12} md={6} lg={3}>
-          <Paper
+        <MuiGrid item xs={12} md={6} lg={3}>
+          <MuiPaper
             elevation={3}
             sx={{
               p: 3,
@@ -44,15 +173,15 @@ const Dashboard = () => {
               color: 'white',
             }}
           >
-            <Typography variant="h6" gutterBottom>
+            <MuiTypography variant="h6" gutterBottom>
               Total Patients
-            </Typography>
-            <Typography variant="h3">0</Typography>
-          </Paper>
-        </Grid>
+            </MuiTypography>
+            <MuiTypography variant="h3">0</MuiTypography>
+          </MuiPaper>
+        </MuiGrid>
 
-        <Grid item xs={12} md={6} lg={3}>
-          <Paper
+        <MuiGrid item xs={12} md={6} lg={3}>
+          <MuiPaper
             elevation={3}
             sx={{
               p: 3,
@@ -64,15 +193,15 @@ const Dashboard = () => {
               color: 'white',
             }}
           >
-            <Typography variant="h6" gutterBottom>
+            <MuiTypography variant="h6" gutterBottom>
               Available Rooms
-            </Typography>
-            <Typography variant="h3">0</Typography>
-          </Paper>
-        </Grid>
+            </MuiTypography>
+            <MuiTypography variant="h3">0</MuiTypography>
+          </MuiPaper>
+        </MuiGrid>
 
-        <Grid item xs={12} md={6} lg={3}>
-          <Paper
+        <MuiGrid item xs={12} md={6} lg={3}>
+          <MuiPaper
             elevation={3}
             sx={{
               p: 3,
@@ -84,13 +213,13 @@ const Dashboard = () => {
               color: 'white',
             }}
           >
-            <Typography variant="h6" gutterBottom>
+            <MuiTypography variant="h6" gutterBottom>
               Active Doctors
-            </Typography>
-            <Typography variant="h3">0</Typography>
-          </Paper>
-        </Grid>
-      </Grid>
+            </MuiTypography>
+            <MuiTypography variant="h3">0</MuiTypography>
+          </MuiPaper>
+        </MuiGrid>
+      </MuiGrid>
     </Box>
   );
 };

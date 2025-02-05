@@ -156,6 +156,27 @@ const getAvailableRoomsForTreatment = async (treatmentId: string): Promise<Room[
   }
 };
 
+const getDoctorAppointments = async (doctorId: string, date?: string): Promise<Appointment[]> => {
+  try {
+    const params = date ? { date } : {};
+    const response = await axiosInstance.get<ApiResponse<{ appointments: Appointment[] }>>(`/appointments/doctor/${doctorId}`, { params });
+    return response.data.data.appointments;
+  } catch (error) {
+    console.error('Error in getDoctorAppointments:', error);
+    throw error;
+  }
+};
+
+const updateAppointmentStatus = async (appointmentId: string, status: AppointmentStatus): Promise<Appointment> => {
+  try {
+    const response = await axiosInstance.patch<ApiResponse<{ appointment: Appointment }>>(`/appointments/${appointmentId}/status`, { status });
+    return response.data.data.appointment;
+  } catch (error) {
+    console.error('Error in updateAppointmentStatus:', error);
+    throw error;
+  }
+};
+
 export const appointmentService = {
   createAppointment,
   getDoctors,
@@ -165,5 +186,7 @@ export const appointmentService = {
   getDoctorAvailability,
   getAvailableDoctorsForTreatment,
   getAvailableRoomsForTreatment,
-  checkForConflicts
+  checkForConflicts,
+  getDoctorAppointments,
+  updateAppointmentStatus
 };
