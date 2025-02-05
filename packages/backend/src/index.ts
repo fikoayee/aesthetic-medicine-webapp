@@ -13,6 +13,7 @@ import roomRoutes from './routes/room.routes';
 import doctorRoutes from './routes/doctor.routes';
 import specializationRoutes from './routes/specialization.routes';
 import appointmentRoutes from './routes/appointment.routes';
+import statisticsRoutes from './routes/statistics.routes';
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.use(helmet());
 app.use(express.json());
 
 // Routes
+console.log('Registering application routes...');
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/patients', patientRoutes);
@@ -39,6 +41,7 @@ app.use('/doctors', doctorRoutes);
 app.use('/specializations', specializationRoutes);
 app.use('/treatments', treatmentRoutes);
 app.use('/appointments', appointmentRoutes);
+app.use('/statistics', statisticsRoutes);
 
 // Basic health check route
 app.get('/health', (req, res) => {
