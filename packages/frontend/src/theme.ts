@@ -3,18 +3,22 @@ import { createTheme } from '@mui/material';
 export const theme = createTheme({
   palette: {
     primary: {
-      main: '#2196f3',
-      light: '#64b5f6',
-      dark: '#1976d2',
+      main: '#306ad0',
+      light: '#5d91ed', // accent
+      dark: '#306ad0', // same as main to keep consistent
     },
     secondary: {
-      main: '#f50057', 
-      light: '#ff4081',
-      dark: '#c51162',
+      main: '#82a8ea',
+      light: '#82a8ea', // same as main to keep consistent
+      dark: '#82a8ea', // same as main to keep consistent
+    },
+    text: {
+      primary: '#04070b',
+      secondary: '#04070b',
     },
     background: {
-      default: '#f5f5f5',
-      paper: '#ffffff',
+      default: '#f3f6fb',
+      paper: '#f3f6fb',
     },
   },
   typography: {
@@ -45,6 +49,64 @@ export const theme = createTheme({
     },
   },
   components: {
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: '#f3f6fb',
+          borderRadius: '12px',
+          boxShadow: '0 8px 24px rgba(48, 106, 208, 0.12)',
+          minWidth: '950px',
+          '& .MuiDialogTitle-root': {
+            color: '#04070b',
+            padding: '24px',
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            borderBottom: '1px solid #82a8ea',
+          },
+          '& .MuiDialogContent-root': {
+            padding: '24px',
+            color: '#04070b',
+            '& .MuiTextField-root': {
+              marginBottom: '16px',
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: '#306ad0',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#306ad0',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: '#306ad0',
+              },
+            },
+          },
+          '& .MuiDialogActions-root': {
+            padding: '16px 24px',
+            borderTop: '1px solid #82a8ea',
+            '& .MuiButton-root': {
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 500,
+              padding: '8px 16px',
+              '&.MuiButton-contained': {
+                backgroundColor: '#306ad0',
+                color: '#f3f6fb',
+                '&:hover': {
+                  backgroundColor: '#5d91ed',
+                },
+              },
+              '&.MuiButton-text': {
+                color: '#04070b',
+                '&:hover': {
+                  backgroundColor: '#82a8ea',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {

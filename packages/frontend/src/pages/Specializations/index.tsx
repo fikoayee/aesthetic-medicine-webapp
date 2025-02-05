@@ -149,139 +149,262 @@ const Specializations = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4">Specializations</Typography>
+    <Box sx={{ 
+      bgcolor: '#f3f6fb',
+      height: 'calc(100vh - 64px)',
+      color: '#04070b',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      <Box sx={{ display: 'flex', mb: 3 }}>
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            fontWeight: 600,
+            color: '#04070b',
+            borderBottom: '2px solid #306ad0',
+            paddingBottom: 2,
+            display: 'inline-block'
+          }}
+        >
+          Specializations
+        </Typography>
         {isAdmin && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
+            sx={{
+              bgcolor: '#306ad0',
+              '&:hover': {
+                bgcolor: '#5d91ed',
+              },
+              height: 'fit-content',
+              paddingBlock: '8px',
+              borderRadius: '8px',
+              textTransform: 'none',
+              boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+              marginLeft: 'auto',
+            }}
           >
             Add Specialization
           </Button>
         )}
       </Box>
 
-      <Grid container spacing={3}>
-        {specializations.map((spec) => (
-          <Grid item xs={12} sm={6} md={4} key={spec._id}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Typography variant="h6" component="div">
-                    {spec.name}
-                  </Typography>
-                  {isAdmin && (
-                    <Box>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => handleOpenDialog(spec)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDelete(spec._id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  )}
-                </Box>
-
-                <Typography color="textSecondary" sx={{ mb: 2 }}>
-                  {spec.description}
-                </Typography>
-
-                <Accordion>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <TreatmentIcon sx={{ mr: 1 }} />
-                      <Typography>
-                        Treatments ({spec.treatments?.length || 0})
-                      </Typography>
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    {spec.treatments?.length > 0 ? (
-                      <List disablePadding>
-                        {spec.treatments.map((treatment, index) => (
-                          <Box key={treatment._id}>
-                            {index > 0 && <Divider />}
-                            <ListItem disablePadding sx={{ py: 1 }}>
-                              <ListItemIcon>
-                                <TreatmentIcon />
-                              </ListItemIcon>
-                              <ListItemText
-                                primary={treatment.name}
-                                secondary={`${treatment.duration} min • ${treatment.price} PLN`}
-                              />
-                            </ListItem>
-                          </Box>
-                        ))}
-                      </List>
-                    ) : (
-                      <Typography color="textSecondary">
-                        No treatments assigned
-                      </Typography>
-                    )}
-                  </AccordionDetails>
-                </Accordion>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
       {isAdmin && specializations.length >= 2 && (
-        <Card sx={{ mt: 4 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
+        <Card sx={{ 
+          mb: 3,
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+          bgcolor: '#ffffff',
+        }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography 
+              variant="h6" 
+              gutterBottom
+              sx={{ 
+                fontWeight: 600,
+                color: '#04070b',
+                borderBottom: '2px solid #306ad0',
+                paddingBottom: 2,
+                display: 'inline-block'
+              }}
+            >
               Transfer Treatments
             </Typography>
-            <TreatmentTransfer
-              specializations={specializations}
-              onTransferTreatments={async (fromSpecId, toSpecId, treatmentIds) => {
-                try {
-                  const updatedSpecs = await specializationService.transferTreatments(fromSpecId, toSpecId, treatmentIds);
-                  // Update the specializations that were affected by the transfer
-                  setSpecializations(prev => 
-                    prev.map(spec => {
-                      const updated = updatedSpecs.find(u => u._id === spec._id);
-                      return updated || spec;
-                    })
-                  );
-                  toast.success('Treatments transferred successfully');
-                } catch (error) {
-                  console.error('Error transferring treatments:', error);
-                  toast.error('Failed to transfer treatments');
-                }
-              }}
-            />
+            <Box sx={{ mt: 2 }}>
+              <TreatmentTransfer
+                specializations={specializations}
+                onTransferTreatments={async (fromSpecId, toSpecId, treatmentIds) => {
+                  try {
+                    const updatedSpecs = await specializationService.transferTreatments(fromSpecId, toSpecId, treatmentIds);
+                    setSpecializations(prev => 
+                      prev.map(spec => {
+                        const updated = updatedSpecs.find(u => u._id === spec._id);
+                        return updated || spec;
+                      })
+                    );
+                    toast.success('Treatments transferred successfully');
+                  } catch (error) {
+                    console.error('Error transferring treatments:', error);
+                    toast.error('Failed to transfer treatments');
+                  }
+                }}
+              />
+            </Box>
           </CardContent>
         </Card>
       )}
 
-      <Dialog 
-        open={openDialog} 
-        onClose={handleCloseDialog}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        <Grid container spacing={3} sx={{ height: '100%' }}>
+          {specializations.map((spec) => (
+            <Grid item xs={12} sm={6} md={4} key={spec._id}>
+              <Card sx={{ 
+                borderRadius: '12px',
+                boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+                bgcolor: '#ffffff',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Typography 
+                      variant="h6" 
+                      component="div"
+                      sx={{ 
+                        fontWeight: 600,
+                        color: '#04070b'
+                      }}
+                    >
+                      {spec.name}
+                    </Typography>
+                    {isAdmin && (
+                      <Box>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenDialog(spec)}
+                          sx={{
+                            color: '#306ad0',
+                            '&:hover': {
+                              bgcolor: 'rgba(48, 106, 208, 0.1)',
+                            },
+                          }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(spec._id)}
+                          sx={{
+                            color: '#ff8888',
+                            '&:hover': {
+                              bgcolor: 'rgba(211, 47, 47, 0.1)',
+                            },
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+                    )}
+                  </Box>
+
+                  <Typography 
+                    sx={{ 
+                      mb: 2,
+                      color: '#04070b',
+                      opacity: 0.8
+                    }}
+                  >
+                    {spec.description}
+                  </Typography>
+
+                  <Accordion 
+                    sx={{
+                      boxShadow: 'none',
+                      '&:before': {
+                        display: 'none',
+                      },
+                      bgcolor: 'transparent',
+                    }}
+                  >
+                    <AccordionSummary 
+                      expandIcon={<ExpandMoreIcon sx={{ color: '#306ad0' }} />}
+                      sx={{
+                        bgcolor: '#f3f6fb',
+                        borderRadius: '8px',
+                        '&:hover': {
+                          bgcolor: '#e8edf5',
+                        },
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <TreatmentIcon sx={{ mr: 1, color: '#306ad0' }} />
+                        <Typography sx={{ color: '#04070b', fontWeight: 500 }}>
+                          Treatments ({spec.treatments?.length || 0})
+                        </Typography>
+                      </Box>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      {spec.treatments?.length > 0 ? (
+                        <List disablePadding>
+                          {spec.treatments.map((treatment, index) => (
+                            <Box key={treatment._id}>
+                              {index > 0 && <Divider sx={{ borderColor: '#82a8ea', opacity: 0.2 }} />}
+                              <ListItem 
+                                disablePadding 
+                                sx={{ 
+                                  py: 1.5,
+                                  borderRadius: '8px',
+                                  '&:hover': {
+                                    bgcolor: '#f3f6fb',
+                                  },
+                                }}
+                              >
+                                <ListItemIcon>
+                                  <TreatmentIcon sx={{ color: '#306ad0' }} />
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={
+                                    <Typography sx={{ fontWeight: 500, color: '#04070b' }}>
+                                      {treatment.name}
+                                    </Typography>
+                                  }
+                                  secondary={
+                                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                                      <Chip 
+                                        label={`${treatment.duration} min`}
+                                        size="small"
+                                        sx={{
+                                          bgcolor: '#dddbff',
+                                          color: '#040316',
+                                          borderRadius: '6px',
+                                          '& .MuiChip-label': {
+                                            fontWeight: 500,
+                                          },
+                                        }}
+                                      />
+                                      <Chip 
+                                        label={`${treatment.price} PLN`}
+                                        size="small"
+                                        sx={{
+                                          bgcolor: '#dddbff',
+                                          color: '#040316',
+                                          borderRadius: '6px',
+                                          '& .MuiChip-label': {
+                                            fontWeight: 500,
+                                          },
+                                        }}
+                                      />
+                                    </Box>
+                                  }
+                                />
+                              </ListItem>
+                            </Box>
+                          ))}
+                        </List>
+                      ) : (
+                        <Typography sx={{ color: '#04070b', opacity: 0.7, py: 1 }}>
+                          No treatments assigned
+                        </Typography>
+                      )}
+                    </AccordionDetails>
+                  </Accordion>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+
+      <Dialog open={openDialog} onClose={handleCloseDialog}>
         <DialogTitle>
           {selectedSpecialization ? 'Edit Specialization' : 'Add New Specialization'}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-            
             <TextField
               fullWidth
               label="Name"
@@ -302,11 +425,19 @@ const Specializations = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleCloseDialog}>
+            Cancel
+          </Button>
           <Button
             onClick={handleSubmit}
             variant="contained"
             disabled={loading || !formData.name || !formData.description}
+            sx={{
+              bgcolor: '#306ad0',
+              '&:hover': {
+                bgcolor: '#5d91ed',
+              },
+            }}
           >
             {loading ? 'Saving...' : selectedSpecialization ? 'Update' : 'Create'}
           </Button>

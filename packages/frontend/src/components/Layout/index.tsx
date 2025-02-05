@@ -27,7 +27,7 @@ const Layout = ({ children }: LayoutProps) => {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <Sidebar />
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Navbar />
@@ -36,6 +36,7 @@ const Layout = ({ children }: LayoutProps) => {
           sx={{
             flex: 1,
             p: 3,
+            mt: '64px', 
             bgcolor: 'background.default',
             overflow: 'auto',
           }}
@@ -48,4 +49,3 @@ const Layout = ({ children }: LayoutProps) => {
 };
 
 export default Layout;
-

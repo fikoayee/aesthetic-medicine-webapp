@@ -100,8 +100,15 @@ export default function TreatmentTransfer({ specializations, onTransferTreatment
   };
 
   const customList = (treatments: Treatment[]) => (
-    <Card>
-      <List dense component="div" role="list">
+    <Card sx={{
+      borderRadius: '12px',
+      boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+      bgcolor: '#ffffff',
+      minHeight: '300px',
+      maxHeight: '400px',
+      overflow: 'auto',
+    }}>
+      <List dense component="div" role="list" sx={{ p: 0 }}>
         {treatments.map((treatment: Treatment) => {
           const labelId = `transfer-list-item-${treatment._id}-label`;
 
@@ -111,6 +118,12 @@ export default function TreatmentTransfer({ specializations, onTransferTreatment
               role="listitem"
               button
               onClick={handleToggle(treatment)}
+              sx={{
+                '&:hover': {
+                  bgcolor: '#f3f6fb',
+                },
+                borderBottom: '1px solid rgba(130, 168, 234, 0.2)',
+              }}
             >
               <ListItemIcon>
                 <Checkbox
@@ -120,19 +133,67 @@ export default function TreatmentTransfer({ specializations, onTransferTreatment
                   inputProps={{
                     'aria-labelledby': labelId,
                   }}
+                  sx={{
+                    color: '#306ad0',
+                    '&.Mui-checked': {
+                      color: '#306ad0',
+                    },
+                  }}
                 />
               </ListItemIcon>
               <ListItemIcon>
-                <TreatmentIcon />
+                <TreatmentIcon sx={{ color: '#306ad0' }} />
               </ListItemIcon>
               <ListItemText
                 id={labelId}
-                primary={treatment.name}
-                secondary={`${treatment.duration} min • ${treatment.price} PLN`}
+                primary={
+                  <Typography sx={{ fontWeight: 500, color: '#04070b' }}>
+                    {treatment.name}
+                  </Typography>
+                }
+                secondary={
+                  <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                    <Box
+                      component="span"
+                      sx={{
+                        bgcolor: '#dddbff',
+                        color: '#040316',
+                        px: 1,
+                        py: 0.5,
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {treatment.duration} min
+                    </Box>
+                    <Box
+                      component="span"
+                      sx={{
+                        bgcolor: '#dddbff',
+                        color: '#040316',
+                        px: 1,
+                        py: 0.5,
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {treatment.price} PLN
+                    </Box>
+                  </Box>
+                }
               />
             </ListItem>
           );
         })}
+        {treatments.length === 0 && (
+          <ListItem sx={{ justifyContent: 'center', py: 3 }}>
+            <Typography sx={{ color: '#04070b', opacity: 0.7 }}>
+              No treatments available
+            </Typography>
+          </ListItem>
+        )}
       </List>
     </Card>
   );
@@ -146,6 +207,19 @@ export default function TreatmentTransfer({ specializations, onTransferTreatment
             value={sourceSpecId}
             label="Source Specialization"
             onChange={(e) => setSourceSpecId(e.target.value)}
+            sx={{
+              bgcolor: '#ffffff',
+              borderRadius: '8px',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(130, 168, 234, 0.5)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#306ad0',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#306ad0',
+              },
+            }}
           >
             {specializations.map((spec) => (
               <MenuItem key={spec._id} value={spec._id}>
@@ -156,7 +230,14 @@ export default function TreatmentTransfer({ specializations, onTransferTreatment
         </FormControl>
         {sourceSpecId && (
           <Box mt={2}>
-            <Typography variant="subtitle2" color="textSecondary">
+            <Typography 
+              variant="subtitle2" 
+              sx={{ 
+                mb: 1,
+                color: '#04070b',
+                fontWeight: 500,
+              }}
+            >
               Available Treatments
             </Typography>
             {customList(sourceTreatments)}
@@ -172,6 +253,18 @@ export default function TreatmentTransfer({ specializations, onTransferTreatment
               onClick={handleAllRight}
               disabled={sourceTreatments.length === 0 || !sourceSpecId || !targetSpecId}
               aria-label="move all right"
+              sx={{
+                borderColor: '#306ad0',
+                color: '#306ad0',
+                '&:hover': {
+                  borderColor: '#5d91ed',
+                  bgcolor: 'rgba(48, 106, 208, 0.04)',
+                },
+                '&.Mui-disabled': {
+                  borderColor: 'rgba(48, 106, 208, 0.2)',
+                },
+                minWidth: '40px',
+              }}
             >
               ≫
             </Button>
@@ -183,6 +276,18 @@ export default function TreatmentTransfer({ specializations, onTransferTreatment
               onClick={handleCheckedRight}
               disabled={leftChecked.length === 0 || !sourceSpecId || !targetSpecId}
               aria-label="move selected right"
+              sx={{
+                borderColor: '#306ad0',
+                color: '#306ad0',
+                '&:hover': {
+                  borderColor: '#5d91ed',
+                  bgcolor: 'rgba(48, 106, 208, 0.04)',
+                },
+                '&.Mui-disabled': {
+                  borderColor: 'rgba(48, 106, 208, 0.2)',
+                },
+                minWidth: '40px',
+              }}
             >
               &gt;
             </Button>
@@ -194,6 +299,18 @@ export default function TreatmentTransfer({ specializations, onTransferTreatment
               onClick={handleCheckedLeft}
               disabled={rightChecked.length === 0 || !sourceSpecId || !targetSpecId}
               aria-label="move selected left"
+              sx={{
+                borderColor: '#306ad0',
+                color: '#306ad0',
+                '&:hover': {
+                  borderColor: '#5d91ed',
+                  bgcolor: 'rgba(48, 106, 208, 0.04)',
+                },
+                '&.Mui-disabled': {
+                  borderColor: 'rgba(48, 106, 208, 0.2)',
+                },
+                minWidth: '40px',
+              }}
             >
               &lt;
             </Button>
@@ -205,6 +322,18 @@ export default function TreatmentTransfer({ specializations, onTransferTreatment
               onClick={handleAllLeft}
               disabled={targetTreatments.length === 0 || !sourceSpecId || !targetSpecId}
               aria-label="move all left"
+              sx={{
+                borderColor: '#306ad0',
+                color: '#306ad0',
+                '&:hover': {
+                  borderColor: '#5d91ed',
+                  bgcolor: 'rgba(48, 106, 208, 0.04)',
+                },
+                '&.Mui-disabled': {
+                  borderColor: 'rgba(48, 106, 208, 0.2)',
+                },
+                minWidth: '40px',
+              }}
             >
               ≪
             </Button>
@@ -218,6 +347,19 @@ export default function TreatmentTransfer({ specializations, onTransferTreatment
             value={targetSpecId}
             label="Target Specialization"
             onChange={(e) => setTargetSpecId(e.target.value)}
+            sx={{
+              bgcolor: '#ffffff',
+              borderRadius: '8px',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(130, 168, 234, 0.5)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#306ad0',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#306ad0',
+              },
+            }}
           >
             {specializations.map((spec) => (
               <MenuItem key={spec._id} value={spec._id}>
@@ -228,7 +370,14 @@ export default function TreatmentTransfer({ specializations, onTransferTreatment
         </FormControl>
         {targetSpecId && (
           <Box mt={2}>
-            <Typography variant="subtitle2" color="textSecondary">
+            <Typography 
+              variant="subtitle2" 
+              sx={{ 
+                mb: 1,
+                color: '#04070b',
+                fontWeight: 500,
+              }}
+            >
               Assigned Treatments
             </Typography>
             {customList(targetTreatments)}

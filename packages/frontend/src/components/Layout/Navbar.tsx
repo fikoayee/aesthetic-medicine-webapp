@@ -32,24 +32,38 @@ const Navbar = () => {
       position="fixed" 
       sx={{ 
         zIndex: (theme) => theme.zIndex.drawer + 1,
-        backgroundColor: 'background.paper',
-        color: 'text.primary',
-        boxShadow: 1,
+        backgroundColor: '#f3f6fb',
+        color: '#04070b',
+        boxShadow: '0 1px 2px rgba(48, 106, 208, 0.05)',
+        borderBottom: '1px solid',
+        borderColor: '#82a8ea',
       }}
     >
       <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 500 }}>
+        <Typography 
+          variant="h6" 
+          component="div" 
+          sx={{ 
+            flexGrow: 1, 
+            fontWeight: 600,
+            color: '#306ad0'
+          }}
+        >
           Aesthetic Medicine Clinic
         </Typography>
         {isAuthenticated ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Chip 
               label={user?.role.toUpperCase()} 
-              color="primary" 
-              size="small" 
-              sx={{ fontWeight: 500 }}
+              size="small"
+              sx={{ 
+                fontWeight: 500,
+                bgcolor: '#306ad0',
+                color: '#f3f6fb',
+                borderRadius: '6px',
+              }}
             />
-            <Typography variant="body1">
+            <Typography variant="body1" sx={{ color: '#04070b' }}>
               {user?.firstName} {user?.lastName}
             </Typography>
             <IconButton
@@ -58,7 +72,12 @@ const Navbar = () => {
               aria-controls="menu-appbar"
               aria-haspopup="true"
               onClick={handleMenu}
-              color="inherit"
+              sx={{ 
+                color: '#306ad0',
+                '&:hover': {
+                  bgcolor: '#82a8ea',
+                }
+              }}
             >
               <AccountCircle />
             </IconButton>
@@ -76,9 +95,39 @@ const Navbar = () => {
               }}
               open={Boolean(anchorEl)}
               onClose={handleClose}
+              PaperProps={{
+                sx: {
+                  mt: 1,
+                  border: '1px solid',
+                  borderColor: '#82a8ea',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(48, 106, 208, 0.05)',
+                  bgcolor: '#f3f6fb'
+                }
+              }}
             >
-              <MenuItem onClick={handleProfile}>Profile</MenuItem>
-              <MenuItem onClick={handleLogout}>Logout</MenuItem>
+              <MenuItem 
+                onClick={handleProfile}
+                sx={{ 
+                  '&:hover': { 
+                    bgcolor: '#82a8ea',
+                    color: '#306ad0',
+                  }
+                }}
+              >
+                Profile
+              </MenuItem>
+              <MenuItem 
+                onClick={handleLogout}
+                sx={{ 
+                  '&:hover': { 
+                    bgcolor: '#82a8ea',
+                    color: '#306ad0',
+                  }
+                }}
+              >
+                Logout
+              </MenuItem>
             </Menu>
           </Box>
         ) : (

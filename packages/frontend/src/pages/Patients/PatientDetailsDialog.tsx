@@ -309,139 +309,232 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
       maxWidth="md" 
       fullWidth
       PaperProps={{
-        sx: { minHeight: '80vh' }
+        sx: { 
+          minHeight: '80vh',
+          bgcolor: '#f3f6fb',
+        }
       }}
       aria-labelledby="patient-details-dialog-title"
     >
-      <DialogTitle id="patient-details-dialog-title">
+      <DialogTitle 
+        id="patient-details-dialog-title"
+        sx={{
+          fontSize: '1.5rem',
+          fontWeight: 600,
+          color: '#04070b',
+          borderBottom: '2px solid #306ad0',
+          m: 2,
+          pb: 2,
+        }}
+      >
         Patient Details: {patient.firstName} {patient.lastName}
       </DialogTitle>
       <Tabs
         value={tabValue}
         onChange={handleTabChange}
         aria-label="patient details tabs"
-        sx={{ px: 3, borderBottom: 1, borderColor: 'divider' }}
+        sx={{ 
+          px: 3,
+          '& .MuiTab-root': {
+            textTransform: 'none',
+            fontSize: '1rem',
+            fontWeight: 500,
+            color: '#04070b',
+            opacity: 0.7,
+            '&.Mui-selected': {
+              color: '#306ad0',
+              opacity: 1,
+            },
+          },
+          '& .MuiTabs-indicator': {
+            backgroundColor: '#306ad0',
+          },
+        }}
       >
         <Tab label="Overview" id="patient-tab-0" aria-controls="patient-tabpanel-0" />
         <Tab label="Appointment History" id="patient-tab-1" aria-controls="patient-tabpanel-1" />
       </Tabs>
 
-      <DialogContent dividers>
+      <DialogContent sx={{ p: 3 }}>
         <TabPanel value={tabValue} index={0}>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
+              <Paper sx={{ 
+                p: 3,
+                height: '100%',
+                borderRadius: '12px',
+                boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+                bgcolor: '#ffffff',
+              }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom
+                  sx={{ 
+                    color: '#04070b',
+                    fontWeight: 600,
+                    borderBottom: '2px solid #306ad0',
+                    paddingBottom: 1,
+                    display: 'inline-block',
+                  }}
+                >
                   Personal Information
                 </Typography>
-                <Grid container spacing={2}>
+                <Grid container spacing={3}>
                   <Grid item xs={6}>
-                    <Typography variant="subtitle2" color="text.secondary">
+                    <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7, mb: 0.5 }}>
                       Full Name
                     </Typography>
-                    <Typography variant="body1">
+                    <Typography variant="body1" sx={{ color: '#04070b', fontWeight: 500 }}>
                       {patient.firstName} {patient.lastName}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
-                    <Typography variant="subtitle2" color="text.secondary">
+                    <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7, mb: 0.5 }}>
                       Date of Birth
                     </Typography>
-                    <Typography variant="body1">
+                    <Typography variant="body1" sx={{ color: '#04070b', fontWeight: 500 }}>
                       {formatDate(patient.birthDate)}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
-                    <Typography variant="subtitle2" color="text.secondary">
+                    <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7, mb: 0.5 }}>
                       Age
                     </Typography>
-                    <Typography variant="body1">
+                    <Typography variant="body1" sx={{ color: '#04070b', fontWeight: 500 }}>
                       {calculateAge(patient.birthDate)}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
-                    <Typography variant="subtitle2" color="text.secondary">
+                    <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7, mb: 0.5 }}>
                       Gender
                     </Typography>
-                    <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>
-                      {patient.gender.toLowerCase()}
-                    </Typography>
+                    <Chip
+                      label={patient.gender.toLowerCase()}
+                      sx={{
+                        bgcolor: '#dddbff',
+                        color: '#040316',
+                        borderRadius: '6px',
+                        textTransform: 'capitalize',
+                        '& .MuiChip-label': {
+                          fontWeight: 500,
+                        },
+                      }}
+                      size="small"
+                    />
                   </Grid>
                 </Grid>
               </Paper>
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
+              <Paper sx={{ 
+                p: 3,
+                height: '100%',
+                borderRadius: '12px',
+                boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+                bgcolor: '#ffffff',
+              }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom
+                  sx={{ 
+                    color: '#04070b',
+                    fontWeight: 600,
+                    borderBottom: '2px solid #306ad0',
+                    paddingBottom: 1,
+                    display: 'inline-block',
+                  }}
+                >
                   Contact Information
                 </Typography>
-                <Grid container spacing={2}>
+                <Grid container spacing={3}>
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2" color="text.secondary">
+                    <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7, mb: 0.5 }}>
                       Email
                     </Typography>
-                    <Typography variant="body1">
+                    <Typography variant="body1" sx={{ color: '#04070b', fontWeight: 500 }}>
                       {patient.email}
                     </Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2" color="text.secondary">
+                    <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7, mb: 0.5 }}>
                       Phone
                     </Typography>
-                    <Typography variant="body1">
+                    <Typography variant="body1" sx={{ color: '#04070b', fontWeight: 500 }}>
                       {patient.phoneNumber}
                     </Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <Tooltip title={patient.address?.street || ''}>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        City
-                      </Typography>
-                      <Typography variant="body1">
-                        {patient.address?.city || 'N/A'}
-                      </Typography>
-                    </Tooltip>
+                    <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7, mb: 0.5 }}>
+                      Address
+                    </Typography>
+                    <Chip
+                      label={patient.address?.city || 'N/A'}
+                      sx={{
+                        bgcolor: '#dddbff',
+                        color: '#040316',
+                        borderRadius: '6px',
+                        '& .MuiChip-label': {
+                          fontWeight: 500,
+                        },
+                      }}
+                      size="small"
+                    />
                   </Grid>
                 </Grid>
               </Paper>
             </Grid>
 
             <Grid item xs={12}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
+              <Paper sx={{ 
+                p: 3,
+                borderRadius: '12px',
+                boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+                bgcolor: '#ffffff',
+              }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom
+                  sx={{ 
+                    color: '#04070b',
+                    fontWeight: 600,
+                    borderBottom: '2px solid #306ad0',
+                    paddingBottom: 1,
+                    display: 'inline-block',
+                  }}
+                >
                   Statistics
                 </Typography>
                 <Grid container spacing={3}>
                   <Grid item xs={12} sm={3}>
-                    <Typography variant="subtitle2" color="text.secondary">
+                    <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7, mb: 0.5 }}>
                       Total Appointments
                     </Typography>
-                    <Typography variant="h6" gutterBottom>
+                    <Typography variant="h6" sx={{ color: '#306ad0', fontWeight: 600 }}>
                       {treatments.length}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={3}>
-                    <Typography variant="subtitle2" color="text.secondary">
+                    <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7, mb: 0.5 }}>
                       Last Visit
                     </Typography>
-                    <Typography variant="h6" gutterBottom>
+                    <Typography variant="h6" sx={{ color: '#306ad0', fontWeight: 600 }}>
                       {formatDate(treatments[0]?.startTime || null)}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={3}>
-                    <Typography variant="subtitle2" color="text.secondary">
+                    <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7, mb: 0.5 }}>
                       Total Spent
                     </Typography>
-                    <Typography variant="h6" gutterBottom>
+                    <Typography variant="h6" sx={{ color: '#306ad0', fontWeight: 600 }}>
                       ${totalSpent}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={3}>
-                    <Typography variant="subtitle2" color="text.secondary">
+                    <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7, mb: 0.5 }}>
                       Average Cost
                     </Typography>
-                    <Typography variant="h6" gutterBottom>
+                    <Typography variant="h6" sx={{ color: '#306ad0', fontWeight: 600 }}>
                       ${avgSpent.toFixed(2)}
                     </Typography>
                   </Grid>
@@ -454,7 +547,7 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
         <TabPanel value={tabValue} index={1}>
           {loading ? (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-              <CircularProgress />
+              <CircularProgress sx={{ color: '#306ad0' }} />
             </Box>
           ) : error ? (
             <Box sx={{ p: 2 }}>
@@ -474,7 +567,7 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
                         InputProps={{
                           startAdornment: (
                             <InputAdornment position="start">
-                              <SearchIcon />
+                              <SearchIcon sx={{ color: '#306ad0' }} />
                             </InputAdornment>
                           ),
                           endAdornment: searchTerm && (
@@ -489,6 +582,16 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
                             </InputAdornment>
                           ),
                         }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            '&:hover fieldset': {
+                              borderColor: '#82a8ea',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: '#306ad0',
+                            },
+                          },
+                        }}
                       />
                     </Grid>
                     <Grid item xs={12} sm={5}>
@@ -502,6 +605,16 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
                               textField: {
                                 size: "small",
                                 fullWidth: true,
+                                sx: {
+                                  '& .MuiOutlinedInput-root': {
+                                    '&:hover fieldset': {
+                                      borderColor: '#82a8ea',
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                      borderColor: '#306ad0',
+                                    },
+                                  },
+                                }
                               }
                             }}
                           />
@@ -513,6 +626,16 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
                               textField: {
                                 size: "small",
                                 fullWidth: true,
+                                sx: {
+                                  '& .MuiOutlinedInput-root': {
+                                    '&:hover fieldset': {
+                                      borderColor: '#82a8ea',
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                      borderColor: '#306ad0',
+                                    },
+                                  },
+                                }
                               }
                             }}
                             minDate={dateRange[0] || undefined}
@@ -524,7 +647,12 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
                       <Tooltip title={`Sort by date (${sortOrder === 'desc' ? 'newest first' : 'oldest first'})`}>
                         <IconButton 
                           onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                          color="primary"
+                          sx={{
+                            color: '#306ad0',
+                            '&:hover': {
+                              bgcolor: 'rgba(48, 106, 208, 0.1)',
+                            },
+                          }}
                           size="large"
                           aria-label="sort by date"
                         >
@@ -536,7 +664,7 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
 
                   {(searchTerm || dateRange[0] || dateRange[1]) && (
                     <Box>
-                      <Typography variant="subtitle2" color="text.secondary">
+                      <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7 }}>
                         Active Filters:
                       </Typography>
                       <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
@@ -545,6 +673,14 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
                             label={`Search: ${searchTerm}`}
                             onDelete={() => setSearchTerm('')}
                             size="small"
+                            sx={{
+                              bgcolor: '#dddbff',
+                              color: '#040316',
+                              borderRadius: '6px',
+                              '& .MuiChip-label': {
+                                fontWeight: 500,
+                              },
+                            }}
                           />
                         )}
                         {(dateRange[0] || dateRange[1]) && (
@@ -552,27 +688,42 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
                             label={`Date: ${dateRange[0] ? formatDate(dateRange[0]) : 'Start'} - ${dateRange[1] ? formatDate(dateRange[1]) : 'End'}`}
                             onDelete={() => setDateRange([null, null])}
                             size="small"
+                            sx={{
+                              bgcolor: '#dddbff',
+                              color: '#040316',
+                              borderRadius: '6px',
+                              '& .MuiChip-label': {
+                                fontWeight: 500,
+                              },
+                            }}
                           />
                         )}
                       </Stack>
                     </Box>
                   )}
-                  <Typography variant="subtitle2" color="text.secondary">
+                  <Typography variant="subtitle2" sx={{ color: '#04070b', opacity: 0.7 }}>
                     Showing {filteredTreatments.length} of {treatments.length} appointments
                   </Typography>
                 </Stack>
               </Box>
 
-              <TableContainer component={Paper}>
+              <TableContainer 
+                component={Paper}
+                sx={{ 
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+                  bgcolor: '#ffffff',
+                }}
+              >
                 <Table>
                   <TableHead>
                     <TableRow>
                       <TableCell style={{ width: '50px' }} />
-                      <TableCell>Date & Time</TableCell>
-                      <TableCell>Treatment</TableCell>
-                      <TableCell>Doctor</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align="right">Cost</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: '#04070b' }}>Date & Time</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: '#04070b' }}>Treatment</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: '#04070b' }}>Doctor</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: '#04070b' }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: '#04070b' }} align="right">Cost</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -586,7 +737,7 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
                     {filteredTreatments.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" sx={{ color: '#04070b', opacity: 0.7 }}>
                             {treatments.length === 0 
                               ? 'No appointment history available'
                               : 'No appointments found matching your filters'}
@@ -601,8 +752,23 @@ const PatientDetailsDialog: React.FC<PatientDetailsDialogProps> = ({
           )}
         </TabPanel>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+
+      <DialogActions sx={{ p: 2 }}>
+        <Button 
+          onClick={onClose}
+          variant="contained"
+          sx={{
+            bgcolor: '#306ad0',
+            '&:hover': {
+              bgcolor: '#5d91ed',
+            },
+            textTransform: 'none',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+          }}
+        >
+          Close
+        </Button>
       </DialogActions>
     </Dialog>
   );

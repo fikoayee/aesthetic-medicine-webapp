@@ -247,15 +247,29 @@ const Treatments = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+    <Box sx={{ 
+      bgcolor: '#f3f6fb',
+      height: 'calc(100vh - 64px)',
+      color: '#04070b',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      <Box sx={{ 
+        display: 'flex', 
+        mb: 3,
+        px: 3,
+        pt: 2,
+      }}>
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            fontWeight: 600,
+            color: '#04070b',
+            borderBottom: '2px solid #306ad0',
+            paddingBottom: 2,
+            display: 'inline-block'
+          }}
+        >
           Treatments
         </Typography>
         {isAdmin && (
@@ -263,177 +277,338 @@ const Treatments = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
+            sx={{
+              bgcolor: '#306ad0',
+              '&:hover': {
+                bgcolor: '#5d91ed',
+              },
+              height: 'fit-content',
+              paddingBlock: '8px',
+              borderRadius: '8px',
+              textTransform: 'none',
+              boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+              marginLeft: 'auto',
+            }}
           >
             Add Treatment
           </Button>
         )}
       </Box>
 
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                <FilterListIcon sx={{ mr: 1 }} />
-                Filters
-              </Typography>
-            </Grid>
+      <Box sx={{ flex: 1, minHeight: 0, px: 3, overflow: 'auto' }}>
+        <Card sx={{ 
+          mb: 3,
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+          bgcolor: '#ffffff',
+        }}>
+          <CardContent>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    mb: 2, 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    fontWeight: 600,
+                    color: '#04070b',
+                    borderBottom: '2px solid #306ad0',
+                    paddingBottom: 2,
+                    display: 'inline-block'
+                  }}
+                >
+                  <FilterListIcon sx={{ mr: 1 }} />
+                  Filters
+                </Typography>
+              </Grid>
 
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Search treatments"
-                placeholder="Search by name or description"
-                value={filters.searchQuery}
-                onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <Typography gutterBottom>Price Range (PLN)</Typography>
-              <Slider
-                value={filters.priceRange}
-                onChange={(_, newValue) => 
-                  setFilters(prev => ({ ...prev, priceRange: newValue as [number, number] }))}
-                valueLabelDisplay="auto"
-                min={0}
-                max={Math.max(...treatments.map(t => t.price))}
-                valueLabelFormat={value => formatPrice(value)}
-              />
-            </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Search treatments"
+                  placeholder="Search by name or description"
+                  value={filters.searchQuery}
+                  onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ color: '#306ad0' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '&:hover fieldset': {
+                        borderColor: '#82a8ea',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#306ad0',
+                      },
+                    },
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <Typography gutterBottom sx={{ color: '#04070b', fontWeight: 500 }}>
+                  Price Range (PLN)
+                </Typography>
+                <Slider
+                  value={filters.priceRange}
+                  onChange={(_, newValue) => 
+                    setFilters(prev => ({ ...prev, priceRange: newValue as [number, number] }))}
+                  valueLabelDisplay="auto"
+                  min={0}
+                  max={Math.max(...treatments.map(t => t.price))}
+                  valueLabelFormat={value => formatPrice(value)}
+                  sx={{
+                    color: '#306ad0',
+                    '& .MuiSlider-thumb': {
+                      '&:hover, &.Mui-focusVisible': {
+                        boxShadow: '0 0 0 8px rgba(48, 106, 208, 0.1)',
+                      },
+                    },
+                  }}
+                />
+              </Grid>
 
-            <Grid item xs={12} md={4}>
-              <Typography gutterBottom>Duration Range (minutes)</Typography>
-              <Slider
-                value={filters.durationRange}
-                onChange={(_, newValue) => 
-                  setFilters(prev => ({ ...prev, durationRange: newValue as [number, number] }))}
-                valueLabelDisplay="auto"
-                min={0}
-                max={Math.max(...treatments.map(t => t.duration))}
-                valueLabelFormat={value => `${value} min`}
-              />
-            </Grid>
+              <Grid item xs={12} md={4}>
+                <Typography gutterBottom sx={{ color: '#04070b', fontWeight: 500 }}>
+                  Duration Range (minutes)
+                </Typography>
+                <Slider
+                  value={filters.durationRange}
+                  onChange={(_, newValue) => 
+                    setFilters(prev => ({ ...prev, durationRange: newValue as [number, number] }))}
+                  valueLabelDisplay="auto"
+                  min={0}
+                  max={Math.max(...treatments.map(t => t.duration))}
+                  valueLabelFormat={value => `${value} min`}
+                  sx={{
+                    color: '#306ad0',
+                    '& .MuiSlider-thumb': {
+                      '&:hover, &.Mui-focusVisible': {
+                        boxShadow: '0 0 0 8px rgba(48, 106, 208, 0.1)',
+                      },
+                    },
+                  }}
+                />
+              </Grid>
 
-            <Grid item xs={12} md={4}>
-              <Autocomplete
-                multiple
-                options={specializations}
-                getOptionLabel={(option) => option.name}
-                value={specializations.filter(spec => 
-                  filters.selectedSpecializations.includes(spec._id))}
-                onChange={(_, newValue) => {
-                  setFilters(prev => ({
-                    ...prev,
-                    selectedSpecializations: newValue.map(spec => spec._id)
-                  }));
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Specializations"
-                    placeholder="Select specializations"
-                  />
-                )}
-                renderTags={(value, getTagProps) =>
-                  value.map((option, index) => (
+              <Grid item xs={12} md={4}>
+                <Autocomplete
+                  multiple
+                  options={specializations}
+                  getOptionLabel={(option) => option.name}
+                  value={specializations.filter(spec => 
+                    filters.selectedSpecializations.includes(spec._id))}
+                  onChange={(_, newValue) => {
+                    setFilters(prev => ({
+                      ...prev,
+                      selectedSpecializations: newValue.map(spec => spec._id)
+                    }));
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Specializations"
+                      placeholder="Select specializations"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '&:hover fieldset': {
+                            borderColor: '#82a8ea',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: '#306ad0',
+                          },
+                        },
+                      }}
+                    />
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        label={option.name}
+                        {...getTagProps({ index })}
+                        sx={{
+                          bgcolor: '#dddbff',
+                          color: '#040316',
+                          borderRadius: '6px',
+                          '& .MuiChip-label': {
+                            fontWeight: 500,
+                          },
+                        }}
+                        size="small"
+                      />
+                    ))
+                  }
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Typography gutterBottom sx={{ color: '#04070b', fontWeight: 500 }}>
+                  Duration
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {DURATION_SLOTS.map((slot) => (
                     <Chip
-                      label={option.name}
-                      {...getTagProps({ index })}
-                      color="primary"
-                      variant="outlined"
+                      key={slot.value}
+                      label={slot.label}
+                      onClick={() => {
+                        setFilters(prev => {
+                          const newSlots = prev.selectedDurationSlots.includes(slot.value)
+                            ? prev.selectedDurationSlots.filter(v => v !== slot.value)
+                            : [...prev.selectedDurationSlots, slot.value];
+                          return { ...prev, selectedDurationSlots: newSlots };
+                        });
+                      }}
+                      sx={{
+                        bgcolor: filters.selectedDurationSlots.includes(slot.value) ? '#dddbff' : 'transparent',
+                        color: '#040316',
+                        borderColor: filters.selectedDurationSlots.includes(slot.value) ? '#306ad0' : '#82a8ea',
+                        borderRadius: '6px',
+                        '&:hover': {
+                          bgcolor: filters.selectedDurationSlots.includes(slot.value) ? '#c5c2ff' : 'rgba(48, 106, 208, 0.1)',
+                        },
+                        '& .MuiChip-label': {
+                          fontWeight: 500,
+                        },
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        <TableContainer 
+          component={Paper} 
+          sx={{ 
+            borderRadius: '12px',
+            boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+            bgcolor: '#ffffff',
+          }}
+        >
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600, color: '#04070b' }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#04070b' }}>Description</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#04070b' }}>Specialization</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: '#04070b' }}>Duration (min)</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: '#04070b' }}>Price</TableCell>
+                {isAdmin && <TableCell align="right" sx={{ fontWeight: 600, color: '#04070b' }}>Actions</TableCell>}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredTreatments.map((treatment) => (
+                <TableRow 
+                  key={treatment._id}
+                  sx={{
+                    '&:hover': {
+                      bgcolor: '#f3f6fb',
+                    },
+                  }}
+                >
+                  <TableCell component="th" scope="row" sx={{ color: '#04070b', fontWeight: 500 }}>
+                    {treatment.name}
+                  </TableCell>
+                  <TableCell sx={{ color: '#04070b' }}>{treatment.description}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={treatment.specialization.name}
+                      sx={{
+                        bgcolor: '#dddbff',
+                        color: '#040316',
+                        borderRadius: '6px',
+                        '& .MuiChip-label': {
+                          fontWeight: 500,
+                        },
+                      }}
                       size="small"
                     />
-                  ))
-                }
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <Typography gutterBottom>Duration</Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {DURATION_SLOTS.map((slot) => (
-                  <Chip
-                    key={slot.value}
-                    label={slot.label}
-                    onClick={() => {
-                      setFilters(prev => {
-                        const newSlots = prev.selectedDurationSlots.includes(slot.value)
-                          ? prev.selectedDurationSlots.filter(v => v !== slot.value)
-                          : [...prev.selectedDurationSlots, slot.value];
-                        return { ...prev, selectedDurationSlots: newSlots };
-                      });
-                    }}
-                    color={filters.selectedDurationSlots.includes(slot.value) ? "primary" : "default"}
-                    variant={filters.selectedDurationSlots.includes(slot.value) ? "filled" : "outlined"}
-                  />
-                ))}
-              </Box>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Specialization</TableCell>
-              <TableCell align="right">Duration (min)</TableCell>
-              <TableCell align="right">Price</TableCell>
-              {isAdmin && <TableCell align="right">Actions</TableCell>}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredTreatments.map((treatment) => (
-              <TableRow key={treatment._id}>
-                <TableCell component="th" scope="row">
-                  {treatment.name}
-                </TableCell>
-                <TableCell>{treatment.description}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={treatment.specialization.name}
-                    color="primary"
-                    variant="outlined"
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell align="right">{treatment.duration}</TableCell>
-                <TableCell align="right">{formatPrice(treatment.price)}</TableCell>
-                {isAdmin && (
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleOpenDialog(treatment)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(treatment._id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
                   </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                  <TableCell align="right" sx={{ color: '#04070b' }}>
+                    <Chip
+                      label={`${treatment.duration} min`}
+                      sx={{
+                        bgcolor: '#dddbff',
+                        color: '#040316',
+                        borderRadius: '6px',
+                        '& .MuiChip-label': {
+                          fontWeight: 500,
+                        },
+                      }}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell align="right" sx={{ color: '#04070b' }}>
+                    <Chip
+                      label={formatPrice(treatment.price)}
+                      sx={{
+                        bgcolor: '#dddbff',
+                        color: '#040316',
+                        borderRadius: '6px',
+                        '& .MuiChip-label': {
+                          fontWeight: 500,
+                        },
+                      }}
+                      size="small"
+                    />
+                  </TableCell>
+                  {isAdmin && (
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenDialog(treatment)}
+                        sx={{
+                          color: '#306ad0',
+                          '&:hover': {
+                            bgcolor: 'rgba(48, 106, 208, 0.1)',
+                          },
+                        }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDelete(treatment._id)}
+                        sx={{
+                          color: '#ff8888',
+                          '&:hover': {
+                            bgcolor: 'rgba(211, 47, 47, 0.1)',
+                          },
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
 
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
+      <Dialog 
+        open={openDialog} 
+        onClose={handleCloseDialog} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            minWidth: '950px',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid rgba(130, 168, 234, 0.2)',
+          pb: 2,
+        }}>
           {selectedTreatment ? 'Edit Treatment' : 'Add New Treatment'}
         </DialogTitle>
         <DialogContent>
@@ -443,6 +618,16 @@ const Treatments = () => {
               fullWidth
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: '#82a8ea',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#306ad0',
+                  },
+                },
+              }}
             />
             <TextField
               label="Description"
@@ -451,6 +636,16 @@ const Treatments = () => {
               rows={3}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: '#82a8ea',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#306ad0',
+                  },
+                },
+              }}
             />
             <FormControl fullWidth>
               <InputLabel>Specialization</InputLabel>
@@ -458,6 +653,16 @@ const Treatments = () => {
                 value={formData.specialization}
                 onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
                 label="Specialization"
+                sx={{
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    '&:hover': {
+                      borderColor: '#82a8ea',
+                    },
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#306ad0',
+                  },
+                }}
               >
                 {specializations.map((spec) => (
                   <MenuItem key={spec._id} value={spec._id}>
@@ -475,6 +680,16 @@ const Treatments = () => {
               InputProps={{
                 endAdornment: <InputAdornment position="end">min</InputAdornment>,
               }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: '#82a8ea',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#306ad0',
+                  },
+                },
+              }}
             />
             <TextField
               label="Price"
@@ -485,11 +700,34 @@ const Treatments = () => {
               InputProps={{
                 startAdornment: <InputAdornment position="start">PLN</InputAdornment>,
               }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: '#82a8ea',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#306ad0',
+                  },
+                },
+              }}
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+        <DialogActions sx={{ 
+          borderTop: '1px solid rgba(130, 168, 234, 0.2)',
+          p: 2,
+        }}>
+          <Button 
+            onClick={handleCloseDialog}
+            sx={{
+              color: '#04070b',
+              '&:hover': {
+                bgcolor: 'rgba(4, 7, 11, 0.05)',
+              },
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleSubmit}
             variant="contained"
@@ -500,6 +738,18 @@ const Treatments = () => {
               formData.duration < 1 ||
               formData.price < 0
             }
+            sx={{
+              bgcolor: '#306ad0',
+              '&:hover': {
+                bgcolor: '#5d91ed',
+              },
+              '&.Mui-disabled': {
+                bgcolor: 'rgba(48, 106, 208, 0.3)',
+              },
+              textTransform: 'none',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+            }}
           >
             {selectedTreatment ? 'Update' : 'Create'}
           </Button>

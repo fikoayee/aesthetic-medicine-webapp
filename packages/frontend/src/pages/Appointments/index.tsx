@@ -24,6 +24,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Grid
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -40,6 +41,10 @@ import EventIcon from '@mui/icons-material/Event';
 import InfoIcon from '@mui/icons-material/Info';
 import InputAdornment from '@mui/material/InputAdornment';
 import AppointmentModal from '../../components/AppointmentModal';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import PersonIcon from '@mui/icons-material/Person';
+import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 
 // Constants
 const START_HOUR = 8;  // 8 AM
@@ -198,6 +203,19 @@ const AppointmentBlock = ({
       }
       arrow
       placement="right"
+      PopperProps={{
+        sx: {
+          '& .MuiTooltip-tooltip': {
+            bgcolor: '#ffffff',
+            color: '#04070b',
+            p: 0,
+            maxWidth: 'none',
+          },
+          '& .MuiTooltip-arrow': {
+            color: '#ffffff',
+          },
+        },
+      }}
     >
       <Box
         ref={drag}
@@ -498,68 +516,162 @@ const Appointments = () => {
         onClose={() => setSelectedAppointment(null)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: { 
+            borderRadius: '12px',
+            bgcolor: '#f3f6fb',
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle 
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            borderBottom: '2px solid #306ad0',
+            m: 2,
+            pb: 2,
+            color: '#04070b',
+            fontWeight: 600,
+          }}
+        >
+          <EventIcon sx={{ color: '#306ad0' }} />
           Appointment Details
-          <Chip 
-            label={STATUS_LABELS[selectedAppointment.status]}
-            size="small"
-            color={STATUS_COLORS[selectedAppointment.status]}
-            sx={{ ml: 1 }}
-          />
+          {selectedAppointment && (
+            <Chip 
+              label={STATUS_LABELS[selectedAppointment.status]}
+              size="small"
+              color={STATUS_COLORS[selectedAppointment.status]}
+              sx={{ 
+                ml: 'auto',
+                borderRadius: '6px',
+                '& .MuiChip-label': {
+                  fontWeight: 500,
+                },
+              }}
+            />
+          )}
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 2, py: 2 }}>
-            <Typography color="text.secondary">Date & Time:</Typography>
-            <Typography>
-              {format(parseISO(selectedAppointment.startTime), 'PPP p')} - {' '}
-              {format(parseISO(selectedAppointment.endTime), 'p')}
-            </Typography>
 
-            <Typography color="text.secondary">Patient:</Typography>
-            <Box>
-              <Typography>{selectedAppointment.patientName}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {selectedAppointment.patientEmail}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {selectedAppointment.patientPhone}
-              </Typography>
+        <DialogContent sx={{ px: 4 }}>
+          {selectedAppointment && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, py: 2 }}>
+              <Paper sx={{ p: 3, borderRadius: '12px', boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)' }}>
+                <Typography variant="subtitle1" sx={{ color: '#306ad0', fontWeight: 600, mb: 2 }}>
+                  Date & Time Information
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <EventIcon sx={{ color: '#306ad0' }} />
+                  <Box>
+                    <Typography sx={{ color: '#04070b', fontWeight: 500 }}>
+                      {format(parseISO(selectedAppointment.startTime), 'PPP')}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#04070b', opacity: 0.7 }}>
+                      {format(parseISO(selectedAppointment.startTime), 'p')} - {' '}
+                      {format(parseISO(selectedAppointment.endTime), 'p')}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+
+              <Paper sx={{ p: 3, borderRadius: '12px', boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)' }}>
+                <Typography variant="subtitle1" sx={{ color: '#306ad0', fontWeight: 600, mb: 2 }}>
+                  Patient Information
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 2, alignItems: 'center' }}>
+                  <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Name:</Typography>
+                  <Typography sx={{ color: '#04070b', fontWeight: 500 }}>{selectedAppointment.patientName}</Typography>
+                  
+                  <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Email:</Typography>
+                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.patientEmail}</Typography>
+                  
+                  <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Phone:</Typography>
+                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.patientPhone}</Typography>
+                </Box>
+              </Paper>
+
+              <Paper sx={{ p: 3, borderRadius: '12px', boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)' }}>
+                <Typography variant="subtitle1" sx={{ color: '#306ad0', fontWeight: 600, mb: 2 }}>
+                  Treatment Information
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 2, alignItems: 'center' }}>
+                  <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Treatment:</Typography>
+                  <Typography sx={{ color: '#04070b', fontWeight: 500 }}>{selectedAppointment.treatmentName}</Typography>
+                  
+                  <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Duration:</Typography>
+                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.treatmentDuration}</Typography>
+                  
+                  <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Price:</Typography>
+                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.treatmentPrice}</Typography>
+                  
+                  <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Doctor:</Typography>
+                  <Box>
+                    <Typography sx={{ color: '#04070b', fontWeight: 500 }}>{selectedAppointment.doctorName}</Typography>
+                    <Typography variant="body2" sx={{ color: '#04070b', opacity: 0.7 }}>
+                      {selectedAppointment.doctorSpecialty}
+                    </Typography>
+                  </Box>
+                  
+                  <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Room:</Typography>
+                  <Chip 
+                    label={ROOMS.find(r => r.id === selectedAppointment.roomId)?.name}
+                    size="small"
+                    sx={{
+                      bgcolor: '#dddbff',
+                      color: '#040316',
+                      borderRadius: '6px',
+                      width: 'fit-content',
+                      '& .MuiChip-label': {
+                        fontWeight: 500,
+                      },
+                    }}
+                  />
+                </Box>
+              </Paper>
+
+              {selectedAppointment.notes && (
+                <Paper sx={{ p: 3, borderRadius: '12px', boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)' }}>
+                  <Typography variant="subtitle1" sx={{ color: '#306ad0', fontWeight: 600, mb: 2 }}>
+                    Notes
+                  </Typography>
+                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.notes}</Typography>
+                </Paper>
+              )}
             </Box>
-
-            <Typography color="text.secondary">Treatment:</Typography>
-            <Box>
-              <Typography>{selectedAppointment.treatmentName}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Duration: {selectedAppointment.treatmentDuration}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Price: {selectedAppointment.treatmentPrice}
-              </Typography>
-            </Box>
-
-            <Typography color="text.secondary">Doctor:</Typography>
-            <Box>
-              <Typography>{selectedAppointment.doctorName}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {selectedAppointment.doctorSpecialty}
-              </Typography>
-            </Box>
-
-            <Typography color="text.secondary">Room:</Typography>
-            <Typography>
-              {ROOMS.find(r => r.id === selectedAppointment.roomId)?.name}
-            </Typography>
-
-            <Typography color="text.secondary">Notes:</Typography>
-            <Typography>{selectedAppointment.notes}</Typography>
-          </Box>
+          )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => handleAppointmentClick(selectedAppointment)}>
+
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            onClick={() => handleAppointmentClick(selectedAppointment!)}
+            variant="outlined"
+            startIcon={<CalendarMonthIcon />}
+            sx={{
+              color: '#306ad0',
+              borderColor: '#306ad0',
+              '&:hover': {
+                borderColor: '#5d91ed',
+                bgcolor: 'rgba(48, 106, 208, 0.1)',
+              },
+              textTransform: 'none',
+              borderRadius: '8px',
+            }}
+          >
             View in Calendar
           </Button>
-          <Button onClick={() => setSelectedAppointment(null)}>
+          <Button 
+            onClick={() => setSelectedAppointment(null)}
+            variant="contained"
+            sx={{
+              bgcolor: '#306ad0',
+              '&:hover': {
+                bgcolor: '#5d91ed',
+              },
+              textTransform: 'none',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+            }}
+          >
             Close
           </Button>
         </DialogActions>
@@ -568,33 +680,79 @@ const Appointments = () => {
   };
 
   const renderAppointmentPreview = (appointment: typeof MOCK_APPOINTMENTS[0]) => (
-    <Box sx={{ p: 1 }}>
-      <Typography variant="subtitle2" gutterBottom>
-        {appointment.patientName}
-      </Typography>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: 1, fontSize: '0.875rem' }}>
-        <Typography color="text.secondary">Email:</Typography>
-        <Typography>{appointment.patientEmail}</Typography>
-        
-        <Typography color="text.secondary">Phone:</Typography>
-        <Typography>{appointment.patientPhone}</Typography>
-        
-        <Typography color="text.secondary">Treatment:</Typography>
-        <Typography>{appointment.treatmentName}</Typography>
-        
-        <Typography color="text.secondary">Duration:</Typography>
-        <Typography>{appointment.treatmentDuration}</Typography>
-        
-        <Typography color="text.secondary">Price:</Typography>
-        <Typography>{appointment.treatmentPrice}</Typography>
-        
-        <Typography color="text.secondary">Doctor:</Typography>
-        <Typography>{appointment.doctorName} ({appointment.doctorSpecialty})</Typography>
-        
-        <Typography color="text.secondary">Notes:</Typography>
-        <Typography>{appointment.notes}</Typography>
+    <Paper sx={{ 
+      p: 2,
+      bgcolor: '#ffffff',
+      borderRadius: '8px',
+      width: 320,
+      boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+    }}>
+      <Box sx={{ mb: 2, pb: 2, borderBottom: '2px solid #306ad0' }}>
+        <Typography variant="subtitle1" sx={{ color: '#04070b', fontWeight: 600, mb: 1 }}>
+          {appointment.patientName}
+        </Typography>
+        <Chip 
+          label={STATUS_LABELS[appointment.status]}
+          size="small"
+          color={STATUS_COLORS[appointment.status]}
+          sx={{ 
+            borderRadius: '6px',
+            '& .MuiChip-label': {
+              fontWeight: 500,
+            },
+          }}
+        />
       </Box>
-    </Box>
+      
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'auto 1fr', 
+        gap: 1.5,
+        '& .MuiTypography-root': {
+          fontSize: '0.875rem',
+          lineHeight: 1.5,
+        }
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <EventIcon sx={{ color: '#306ad0', fontSize: '1rem' }} />
+          <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Time:</Typography>
+        </Box>
+        <Typography sx={{ color: '#04070b' }}>
+          {format(parseISO(appointment.startTime), 'h:mm a')} - {format(parseISO(appointment.endTime), 'h:mm a')}
+        </Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LocalHospitalIcon sx={{ color: '#306ad0', fontSize: '1rem' }} />
+          <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Treatment:</Typography>
+        </Box>
+        <Typography sx={{ color: '#04070b' }}>{appointment.treatmentName}</Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AccessTimeIcon sx={{ color: '#306ad0', fontSize: '1rem' }} />
+          <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Duration:</Typography>
+        </Box>
+        <Typography sx={{ color: '#04070b' }}>{appointment.treatmentDuration}</Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <PersonIcon sx={{ color: '#306ad0', fontSize: '1rem' }} />
+          <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Doctor:</Typography>
+        </Box>
+        <Typography sx={{ color: '#04070b' }}>
+          {appointment.doctorName}
+          <Typography component="span" sx={{ color: '#04070b', opacity: 0.7, ml: 0.5 }}>
+            ({appointment.doctorSpecialty})
+          </Typography>
+        </Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <MeetingRoomIcon sx={{ color: '#306ad0', fontSize: '1rem' }} />
+          <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Room:</Typography>
+        </Box>
+        <Typography sx={{ color: '#04070b' }}>
+          {ROOMS.find(r => r.id === appointment.roomId)?.name}
+        </Typography>
+      </Box>
+    </Paper>
   );
 
   const renderListView = () => (
@@ -824,146 +982,283 @@ const Appointments = () => {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3, bgcolor: '#f3f6fb', minHeight: '100vh' }}>
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
-        alignItems: 'flex-start', 
-        mb: 3,
-        gap: 2 
+        alignItems: 'center',
+        mb: 4
       }}>
-        <Typography variant="h4">Appointments Schedule</Typography>
-        
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            color: '#04070b',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}
+        >
+          <EventIcon sx={{ color: '#306ad0' }} />
+          Appointments
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleCreateAppointment}
+          sx={{
+            bgcolor: '#306ad0',
+            '&:hover': {
+              bgcolor: '#5d91ed',
+            },
+            textTransform: 'none',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+          }}
+        >
+          New Appointment
+        </Button>
+      </Box>
+
+      <Paper 
+        sx={{ 
+          p: 3, 
+          mb: 3,
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+        }}
+      >
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={4}>
             <TextField
-              size="small"
-              placeholder="Search appointments..."
+              fullWidth
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{ width: 250 }}
+              placeholder="Search appointments..."
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon />
+                    <SearchIcon sx={{ color: '#306ad0' }} />
                   </InputAdornment>
                 ),
               }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  '&:hover fieldset': {
+                    borderColor: '#82a8ea',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#306ad0',
+                  },
+                },
+              }}
             />
+          </Grid>
 
-            <FormControl size="small" sx={{ minWidth: 200 }}>
-              <InputLabel>Filter by Doctors</InputLabel>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
               <Select
-                multiple
-                value={selectedDoctors}
-                label="Filter by Doctors"
-                onChange={(e) => setSelectedDoctors(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip key={value} label={value} size="small" />
-                    ))}
-                  </Box>
-                )}
-                MenuProps={{
-                  PaperProps: {
-                    style: {
-                      maxHeight: 48 * 4.5
-                    },
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as AppointmentStatus | 'all')}
+                label="Status"
+                sx={{
+                  borderRadius: '8px',
+                  '&:hover fieldset': {
+                    borderColor: '#82a8ea',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#306ad0',
                   },
                 }}
               >
-                {doctors.map(doctor => (
+                <MenuItem value="all">All Status</MenuItem>
+                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                  <MenuItem key={value} value={value}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box 
+                        sx={{ 
+                          width: 8, 
+                          height: 8, 
+                          borderRadius: '50%',
+                          bgcolor: `${STATUS_COLORS[value as AppointmentStatus]}.main`
+                        }} 
+                      />
+                      {label}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Doctor</InputLabel>
+              <Select
+                multiple
+                value={selectedDoctors}
+                onChange={(e) => setSelectedDoctors(typeof e.target.value === 'string' ? [e.target.value] : e.target.value)}
+                label="Doctor"
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip 
+                        key={value} 
+                        label={value} 
+                        size="small"
+                        sx={{
+                          bgcolor: '#dddbff',
+                          color: '#040316',
+                          borderRadius: '6px',
+                          '& .MuiChip-label': {
+                            fontWeight: 500,
+                          },
+                        }}
+                      />
+                    ))}
+                  </Box>
+                )}
+                sx={{
+                  borderRadius: '8px',
+                  '&:hover fieldset': {
+                    borderColor: '#82a8ea',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#306ad0',
+                  },
+                }}
+              >
+                {doctors.map((doctor) => (
                   <MenuItem key={doctor} value={doctor}>
                     {doctor}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
+          </Grid>
 
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <DatePicker
-                  label="Date From"
-                  value={dateRange.start}
-                  onChange={(newValue) => setDateRange(prev => ({ ...prev, start: newValue }))}
-                  slotProps={{ textField: { size: 'small' } }}
-                />
-                <DatePicker
-                  label="Date To"
-                  value={dateRange.end}
-                  onChange={(newValue) => setDateRange(prev => ({ ...prev, end: newValue }))}
-                  slotProps={{ textField: { size: 'small' } }}
-                />
-              </Box>
-            </LocalizationProvider>
-          </Box>
+          <Grid item xs={12} sm={2}>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Tooltip title="List View">
+                <IconButton 
+                  onClick={() => setView('list')}
+                  sx={{ 
+                    color: view === 'list' ? '#306ad0' : '#04070b',
+                    bgcolor: view === 'list' ? 'rgba(48, 106, 208, 0.1)' : 'transparent',
+                    '&:hover': {
+                      bgcolor: 'rgba(48, 106, 208, 0.1)',
+                    },
+                  }}
+                >
+                  <ListAltIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Calendar View">
+                <IconButton 
+                  onClick={() => setView('calendar')}
+                  sx={{ 
+                    color: view === 'calendar' ? '#306ad0' : '#04070b',
+                    bgcolor: view === 'calendar' ? 'rgba(48, 106, 208, 0.1)' : 'transparent',
+                    '&:hover': {
+                      bgcolor: 'rgba(48, 106, 208, 0.1)',
+                    },
+                  }}
+                >
+                  <CalendarMonthIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Grid>
+        </Grid>
 
-          <Box>
-            <Tooltip title="Filter by Status">
-              <Box>
-                {Object.entries(APPOINTMENT_STATUS).map(([key, value]) => (
-                  <Chip
-                    key={value}
-                    label={STATUS_LABELS[value]}
-                    size="small"
-                    color={statusFilter === value ? STATUS_COLORS[value] : 'default'}
-                    onClick={() => setStatusFilter(statusFilter === value ? 'all' : value)}
-                    sx={{ mr: 0.5, mb: 0.5 }}
-                  />
-                ))}
-              </Box>
-            </Tooltip>
-          </Box>
-          
-          {view === 'calendar' && (
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Box sx={{ mt: 3 }}>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            {view === 'calendar' ? (
               <DatePicker
+                label="Select Date"
                 value={selectedDate}
-                onChange={(newValue) => setSelectedDate(newValue)}
-                slotProps={{ textField: { size: 'small' } }}
+                onChange={setSelectedDate}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    sx: {
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '8px',
+                        '&:hover fieldset': {
+                          borderColor: '#82a8ea',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#306ad0',
+                        },
+                      },
+                    }
+                  }
+                }}
               />
-            </LocalizationProvider>
-          )}
-
-          <Tabs 
-            value={view} 
-            onChange={(_, newValue) => setView(newValue)}
-            sx={{ minHeight: 40 }}
-          >
-            <Tab 
-              icon={<ListAltIcon />} 
-              value="list" 
-              label="List" 
-              sx={{ minHeight: 40 }}
-            />
-            <Tab 
-              icon={<CalendarMonthIcon />} 
-              value="calendar" 
-              label="Calendar"
-              sx={{ minHeight: 40 }}
-            />
-          </Tabs>
-
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCreateAppointment}
-          >
-            Create Appointment
-          </Button>
+            ) : (
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <DatePicker
+                  label="Start Date"
+                  value={dateRange.start}
+                  onChange={(date) => setDateRange(prev => ({ ...prev, start: date }))}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      sx: {
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px',
+                          '&:hover fieldset': {
+                            borderColor: '#82a8ea',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: '#306ad0',
+                          },
+                        },
+                      }
+                    }
+                  }}
+                />
+                <DatePicker
+                  label="End Date"
+                  value={dateRange.end}
+                  onChange={(date) => setDateRange(prev => ({ ...prev, end: date }))}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      sx: {
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px',
+                          '&:hover fieldset': {
+                            borderColor: '#82a8ea',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: '#306ad0',
+                          },
+                        },
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            )}
+          </LocalizationProvider>
         </Box>
+      </Paper>
+
+      <Box sx={{ mt: 3 }}>
+        {view === 'list' ? renderListView() : renderCalendarView()}
       </Box>
 
-      {view === 'list' ? renderListView() : renderCalendarView()}
       {renderAppointmentDetails()}
 
       <AppointmentModal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSuccess={() => {
+        onSubmit={() => {
+          // Handle appointment creation
           setIsModalOpen(false);
-          // Refresh appointments here
         }}
       />
     </Box>

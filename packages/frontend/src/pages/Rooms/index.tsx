@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Alert,
   FormControl,
   InputLabel,
   Select,
@@ -37,6 +36,7 @@ import {
 import { Room, roomService } from '../../services/roomService';
 import { Specialization, specializationService } from '../../services/specializationService';
 import { useAuth } from '../../contexts/AuthContext';
+import { toast } from 'react-toastify';
 
 interface RoomFormData {
   name: string;
@@ -70,9 +70,8 @@ const Rooms = () => {
       setLoading(true);
       const fetchedRooms = await roomService.getAllRooms();
       setRooms(fetchedRooms);
-      setError('');
     } catch (err) {
-      setError('Failed to fetch rooms');
+      toast.error('Failed to fetch rooms');
       console.error('Error fetching rooms:', err);
     } finally {
       setLoading(false);
@@ -85,7 +84,7 @@ const Rooms = () => {
       setSpecializations(fetchedSpecializations);
     } catch (err) {
       console.error('Error fetching specializations:', err);
-      setError('Failed to fetch specializations');
+      toast.error('Failed to fetch specializations');
     }
   };
 
@@ -122,14 +121,16 @@ const Rooms = () => {
     try {
       if (selectedRoom) {
         await roomService.updateRoom(selectedRoom._id, formData);
+        toast.success('Room updated successfully');
       } else {
         await roomService.createRoom(formData);
+        toast.success('Room created successfully');
       }
       handleCloseDialog();
       fetchRooms();
     } catch (err) {
       console.error('Error saving room:', err);
-      setError('Failed to save room');
+      toast.error(selectedRoom ? 'Failed to update room' : 'Failed to create room');
     }
   };
 
@@ -137,10 +138,11 @@ const Rooms = () => {
     if (window.confirm('Are you sure you want to delete this room?')) {
       try {
         await roomService.deleteRoom(roomId);
+        toast.success('Room deleted successfully');
         fetchRooms();
       } catch (err) {
         console.error('Error deleting room:', err);
-        setError('Failed to delete room');
+        toast.error('Failed to delete room');
       }
     }
   };
@@ -157,7 +159,7 @@ const Rooms = () => {
           }));
         } catch (error) {
           console.error('Error fetching room specializations:', error);
-          setError('Failed to load specializations');
+          toast.error('Failed to load specializations');
         }
       }
     } else {
@@ -181,179 +183,267 @@ const Rooms = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+    <Box sx={{ 
+      bgcolor: '#f3f6fb',
+      height: 'calc(100vh - 64px)',  
+      color: '#04070b',
+      overflowY: 'auto', 
+    }}>
+     
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Treatment Rooms
-        </Typography>
-        {isAdmin && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-          >
-            Add Room
-          </Button>
-        )}
+      <Box sx={{display: 'flex'}}>
+      <Typography 
+        variant="h4" 
+        sx={{ 
+          mb: 4, 
+          fontWeight: 600,
+          color: '#04070b',
+          borderBottom: '2px solid #306ad0',
+          paddingBottom: 2,
+          display: 'inline-block'
+        }}
+      >
+        Treatment Rooms
+      </Typography>
+      {isAdmin && (
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => handleOpenDialog()}
+          sx={{
+            bgcolor: '#306ad0',
+            '&:hover': {
+              bgcolor: '#5d91ed',
+            },
+            height: 'fit-content',
+            paddingBlock: '8px',
+            borderRadius: '8px',
+            textTransform: 'none',
+            boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+            marginLeft: 'auto',
+          }}
+        >
+          Add New Room
+        </Button>
+      )}
       </Box>
 
       <Grid container spacing={3}>
         {rooms.map((room) => (
-          <Grid item xs={12} sm={6} md={4} key={room._id}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <Typography variant="h6" component="h2">
+          <Grid item xs={12} md={6} lg={4} key={room._id}>
+            <Card 
+              sx={{
+                height: '100%',
+                borderRadius: '12px',
+                border: '1px solid #82a8ea',
+                boxShadow: '0 4px 12px rgba(4, 7, 11, 0.05)',
+                transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 8px 16px rgba(4, 7, 11, 0.1)',
+                },
+                bgcolor: '#f3f6fb',
+              }}
+            >
+              <CardContent sx={{ p: 3, backgroundColor: '#fbfbfe' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: '#04070b',
+                      mb: 1
+                    }}
+                  >
                     {room.name}
                   </Typography>
                   {isAdmin && (
-                    <Box>
+                    <Box sx={{}}>
                       <IconButton 
-                        size="small" 
                         onClick={() => handleOpenDialog(room)}
+                        sx={{ 
+                          color: '#306ad0',
+                          '&:hover': { color: '#5d91ed' }
+                        }}
                       >
                         <EditIcon />
                       </IconButton>
                       <IconButton 
-                        size="small" 
                         onClick={() => handleDelete(room._id)}
+                        sx={{ 
+                          color: '#306ad0',
+                          '&:hover': { color: '#5d91ed' }
+                        }}
                       >
                         <DeleteIcon />
                       </IconButton>
                     </Box>
                   )}
                 </Box>
-                <Typography color="textSecondary" sx={{ mb: 1.5 }}>
+
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    mb: 2,
+                    color: '#04070b',
+                    opacity: 0.8
+                  }}
+                >
                   {room.description}
                 </Typography>
-                
-                <Accordion 
-                  expanded={expandedRoom === room._id}
-                  onChange={() => handleAccordionChange(room._id)}
-                >
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <TreatmentIcon sx={{ mr: 1 }} />
-                      <Typography>
-                        Specializations ({room.specializations?.length || 0})
-                      </Typography>
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    {roomSpecializations[room._id]?.length > 0 ? (
-                      <List disablePadding>
-                        {roomSpecializations[room._id].map((spec, index) => (
-                          <Box key={spec._id}>
-                            {index > 0 && <Divider />}
-                            <ListItem disablePadding sx={{ py: 1 }}>
-                              <ListItemText
-                                primary={spec.name}
-                                secondary={
-                                  <Box>
-                                    <Typography variant="body2" color="text.secondary">
-                                      {spec.description}
-                                    </Typography>
-                                    {spec.treatments?.length > 0 && (
-                                      <List dense>
-                                        {spec.treatments.map(treatment => (
-                                          <ListItem key={treatment._id} disablePadding>
-                                            <ListItemIcon sx={{ minWidth: 36 }}>
-                                              <TreatmentIcon fontSize="small" />
-                                            </ListItemIcon>
-                                            <ListItemText
-                                              primary={treatment.name}
-                                              secondary={`${treatment.duration} min • ${formatPrice(treatment.price)}`}
-                                            />
-                                          </ListItem>
-                                        ))}
-                                      </List>
-                                    )}
-                                  </Box>
-                                }
-                              />
-                            </ListItem>
-                          </Box>
-                        ))}
-                      </List>
-                    ) : (
-                      <Typography color="textSecondary">
-                        No specializations assigned
-                      </Typography>
-                    )}
-                  </AccordionDetails>
-                </Accordion>
+
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {room.specializations.map((spec) => (
+                    <Chip
+                      key={spec._id}
+                      label={spec.name}
+                      size="small"
+                      sx={{
+                        bgcolor: '#dddbff',
+                        color: '#4a4a4a ',
+                        borderRadius: '6px',
+                        '& .MuiChip-label': {
+                          fontWeight: 500,
+                        },
+                      }}
+                    />
+                  ))}
+                </Box>
               </CardContent>
             </Card>
           </Grid>
         ))}
       </Grid>
 
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={openDialog} 
+        onClose={handleCloseDialog}
+      >
         <DialogTitle>
           {selectedRoom ? 'Edit Room' : 'Add New Room'}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Room Name"
-              fullWidth
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
-            <TextField
-              label="Description"
-              fullWidth
-              multiline
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-            <FormControl fullWidth>
-              <InputLabel>Specializations</InputLabel>
-              <Select
-                multiple
-                value={formData.specializations}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  specializations: typeof e.target.value === 'string' 
-                    ? [e.target.value] 
-                    : e.target.value 
-                })}
-                label="Specializations"
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => {
-                      const spec = specializations.find(s => s._id === value);
-                      return spec ? (
-                        <Chip key={value} label={spec.name} size="small" />
-                      ) : null;
-                    })}
-                  </Box>
-                )}
-              >
-                {specializations.map((spec) => (
-                  <MenuItem key={spec._id} value={spec._id}>
-                    {spec.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Room Name"
+            fullWidth
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: '#306ad0',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#306ad0',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: '#306ad0',
+              },
+            }}
+          />
+          <TextField
+            margin="dense"
+            label="Description"
+            fullWidth
+            multiline
+            rows={4}
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: '#306ad0',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#306ad0',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: '#306ad0',
+              },
+            }}
+          />
+          <FormControl 
+            fullWidth 
+            margin="dense"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: '#306ad0',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#306ad0',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: '#306ad0',
+              },
+            }}
+          >
+            <InputLabel>Specializations</InputLabel>
+            <Select
+              multiple
+              value={formData.specializations}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                specializations: typeof e.target.value === 'string' 
+                  ? [e.target.value] 
+                  : e.target.value 
+              })}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((value) => (
+                    <Chip
+                      key={value}
+                      label={specializations.find(spec => spec._id === value)?.name}
+                      sx={{
+                        bgcolor: '#dddbff',
+                        color: '#040316 ',
+                        borderRadius: '6px',
+                        '& .MuiChip-label': {
+                          fontWeight: 500,
+                        },
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
+            >
+              {specializations.map((spec) => (
+                <MenuItem key={spec._id} value={spec._id}>
+                  {spec.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button 
-            onClick={handleSubmit} 
-            variant="contained"
-            disabled={!formData.name || !formData.description || formData.specializations.length === 0}
+            onClick={handleCloseDialog}
+            sx={{ 
+              color: '#04070b',
+              '&:hover': {
+                bgcolor: '#82a8ea',
+              },
+            }}
           >
-            {selectedRoom ? 'Update' : 'Create'}
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            variant="contained"
+            sx={{
+              bgcolor: '#306ad0',
+              '&:hover': {
+                bgcolor: '#5d91ed',
+              },
+              textTransform: 'none',
+            }}
+          >
+            {selectedRoom ? 'Save Changes' : 'Add Room'}
           </Button>
         </DialogActions>
       </Dialog>
