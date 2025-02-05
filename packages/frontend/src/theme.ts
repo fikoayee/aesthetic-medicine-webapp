@@ -49,6 +49,41 @@ export const theme = createTheme({
     },
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        '*': {
+          boxSizing: 'border-box',
+          margin: 0,
+          padding: 0,
+          '&::-webkit-scrollbar': {
+            width: '8px',
+            height: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#c1c1c1',
+            borderRadius: '4px',
+            '&:hover': {
+              background: '#a8a8a8',
+            },
+          },
+          '&::-webkit-scrollbar-corner': {
+            background: 'transparent',
+          },
+        },
+        'html, body': {
+          scrollBehavior: 'smooth',
+        },
+        // Firefox scrollbar styling
+        '*': {
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#c1c1c1 #f1f1f1',
+        },
+      },
+    },
     MuiDialog: {
       styleOverrides: {
         paper: {
@@ -99,7 +134,7 @@ export const theme = createTheme({
               '&.MuiButton-text': {
                 color: '#04070b',
                 '&:hover': {
-                  backgroundColor: '#82a8ea',
+                  backgroundColor: 'rgba(48, 106, 208, 0.08)',
                 },
               },
             },

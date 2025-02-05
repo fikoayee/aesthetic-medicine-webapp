@@ -1,5 +1,6 @@
 import { AppBar, Toolbar, Typography, IconButton, Menu, MenuItem, Box, Chip } from '@mui/material';
 import { AccountCircle } from '@mui/icons-material';
+import { SpaLogo } from './SpaLogo';
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -32,50 +33,94 @@ const Navbar = () => {
       position="fixed" 
       sx={{ 
         zIndex: (theme) => theme.zIndex.drawer + 1,
-        backgroundColor: '#f3f6fb',
+        backgroundColor: '#fdfdfd',
         color: '#04070b',
-        boxShadow: '0 1px 2px rgba(48, 106, 208, 0.05)',
-        borderBottom: '1px solid',
-        borderColor: '#82a8ea',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
       }}
     >
       <Toolbar>
-        <Typography 
-          variant="h6" 
-          component="div" 
-          sx={{ 
-            flexGrow: 1, 
-            fontWeight: 600,
-            color: '#306ad0'
-          }}
-        >
-          Aesthetic Medicine Clinic
-        </Typography>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1.5,
+          flexGrow: 1,
+          cursor: 'pointer',
+          '&:hover .logo': {
+            transform: 'scale(1.05)',
+          }
+        }}>
+          <SpaLogo 
+            className="logo"
+            sx={{ 
+              fontSize: 38,
+              color: '#306ad0',
+              filter: 'drop-shadow(0 2px 4px rgba(48, 106, 208, 0.2))',
+              transition: 'transform 0.2s ease',
+            }} 
+          />
+          <Box>
+            <Typography 
+              variant="h6" 
+              component="div" 
+              sx={{ 
+                fontWeight: 700,
+                color: '#306ad0',
+                lineHeight: 1.2,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              BeautyMed
+            </Typography>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: '#666',
+                fontWeight: 500,
+                letterSpacing: '0.02em',
+                textTransform: 'uppercase',
+              }}
+            >
+              Aesthetic Medicine Clinic
+            </Typography>
+          </Box>
+        </Box>
         {isAuthenticated ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Chip 
               label={user?.role.toUpperCase()} 
               size="small"
               sx={{ 
-                fontWeight: 500,
+                fontWeight: 600,
                 bgcolor: '#306ad0',
-                color: '#f3f6fb',
+                color: '#fff',
                 borderRadius: '6px',
+                px: 0.5,
+                height: 24,
+                '& .MuiChip-label': {
+                  px: 1,
+                }
               }}
             />
-            <Typography variant="body1" sx={{ color: '#04070b' }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: '#04070b',
+                fontWeight: 500,
+              }}
+            >
               {user?.firstName} {user?.lastName}
             </Typography>
             <IconButton
-              size="large"
+              size="small"
               aria-label="account of current user"
               aria-controls="menu-appbar"
               aria-haspopup="true"
               onClick={handleMenu}
               sx={{ 
                 color: '#306ad0',
+                bgcolor: 'rgba(48, 106, 208, 0.08)',
                 '&:hover': {
-                  bgcolor: '#82a8ea',
+                  bgcolor: 'rgba(48, 106, 208, 0.16)',
                 }
               }}
             >
@@ -98,43 +143,31 @@ const Navbar = () => {
               PaperProps={{
                 sx: {
                   mt: 1,
-                  border: '1px solid',
-                  borderColor: '#82a8ea',
                   borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(48, 106, 208, 0.05)',
-                  bgcolor: '#f3f6fb'
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                  border: '1px solid rgba(48, 106, 208, 0.08)',
+                  minWidth: 180,
+                  '& .MuiMenuItem-root': {
+                    py: 1,
+                    px: 2,
+                    borderRadius: '4px',
+                    mx: 1,
+                    my: 0.5,
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    color: '#04070b',
+                    '&:hover': {
+                      bgcolor: 'rgba(48, 106, 208, 0.08)',
+                    }
+                  }
                 }
               }}
             >
-              <MenuItem 
-                onClick={handleProfile}
-                sx={{ 
-                  '&:hover': { 
-                    bgcolor: '#82a8ea',
-                    color: '#306ad0',
-                  }
-                }}
-              >
-                Profile
-              </MenuItem>
-              <MenuItem 
-                onClick={handleLogout}
-                sx={{ 
-                  '&:hover': { 
-                    bgcolor: '#82a8ea',
-                    color: '#306ad0',
-                  }
-                }}
-              >
-                Logout
-              </MenuItem>
+              <MenuItem onClick={handleProfile}>Profile</MenuItem>
+              <MenuItem onClick={handleLogout}>Logout</MenuItem>
             </Menu>
           </Box>
-        ) : (
-          <Typography variant="body1" color="error">
-            Not Authenticated
-          </Typography>
-        )}
+        ) : null}
       </Toolbar>
     </AppBar>
   );

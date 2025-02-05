@@ -502,7 +502,7 @@ const Treatments = () => {
                 {isAdmin && <TableCell align="right" sx={{ fontWeight: 600, color: '#04070b' }}>Actions</TableCell>}
               </TableRow>
             </TableHead>
-            <TableBody>
+            <TableBody sx={{ bgcolor: '#fbfcfe' }}>
               {filteredTreatments.map((treatment) => (
                 <TableRow 
                   key={treatment._id}

@@ -380,6 +380,7 @@ const Doctors = () => {
       <Paper sx={{ 
         p: 3, 
         mb: 3,
+        backgroundColor: '#fdfdfd',
         borderRadius: '12px',
         boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
       }}>
@@ -511,7 +512,7 @@ const Doctors = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ 
-              bgcolor: '#f8fafd',
+              bgcolor: '#ffffff',
               '& th': { 
                 fontWeight: 600,
                 color: '#04070b',
@@ -551,16 +552,17 @@ const Doctors = () => {
               {isAdmin && <TableCell align="right">Actions</TableCell>}
             </TableRow>
           </TableHead>
-          <TableBody>
+          <TableBody sx={{backgroundColor: '#fbfcfe'}}>
             {filteredDoctors.map((doctor) => (
               <TableRow 
                 key={doctor._id}
                 hover
                 sx={{ 
                   cursor: 'pointer',
+                  backgroundColor: '#fbfcfe',
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    bgcolor: alpha('#306ad0', 0.04),
+                    bgcolor: alpha('#fdfdfd', 0.04),
                   },
                 }}
                 onClick={() => handleOpenDialog(doctor)}

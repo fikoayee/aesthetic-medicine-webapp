@@ -244,7 +244,7 @@ const Specializations = () => {
               <Card sx={{ 
                 borderRadius: '12px',
                 boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
-                bgcolor: '#ffffff',
+                bgcolor: '#fbfcfe',
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',

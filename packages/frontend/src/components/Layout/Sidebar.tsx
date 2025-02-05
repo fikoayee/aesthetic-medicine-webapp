@@ -8,6 +8,7 @@ import {
   Box,
   useTheme,
   useMediaQuery,
+  Typography,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -22,7 +23,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
-const drawerWidth = 240;
+const drawerWidth = 245;
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -47,33 +48,57 @@ const Sidebar = () => {
   }
 
   const drawer = (
-    <Box sx={{ mt: '64px' }}> {/* Account for navbar height */}
-      <List>
+    <Box 
+      sx={{ 
+        mt: '64px',
+        px: 2,
+        py: 2,
+        height: '100%',
+        bgcolor: '#fdfdfd',
+      }}
+    >
+      <Typography 
+        variant="overline" 
+        sx={{ 
+          px: 2, 
+          color: '#666',
+          fontWeight: 600,
+          letterSpacing: '0.1em',
+        }}
+      >
+        MENU
+      </Typography>
+      
+      <List sx={{ mt: 1 }}>
         {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
+          <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
               onClick={() => navigate(item.path)}
               selected={location.pathname === item.path}
               sx={{
+                borderRadius: '12px',
                 '&.Mui-selected': {
-                  backgroundColor: 'primary.main',
-                  color: 'primary.contrastText',
+                  bgcolor: '#306ad0',
+                  color: '#fff',
                   '& .MuiListItemIcon-root': {
-                    color: 'primary.contrastText',
+                    color: '#fff',
                   },
                   '&:hover': {
-                    backgroundColor: 'primary.dark',
+                    bgcolor: '#2857b0',
                   },
                 },
                 '&:hover': {
-                  backgroundColor: 'action.hover',
+                  bgcolor: 'rgba(48, 106, 208, 0.08)',
                 },
+                transition: 'all 0.2s ease',
+                py: 1.5,
               }}
             >
               <ListItemIcon
                 sx={{
                   minWidth: 40,
-                  color: location.pathname === item.path ? 'inherit' : 'text.secondary',
+                  color: location.pathname === item.path ? 'inherit' : '#666',
+                  transition: 'color 0.2s ease',
                 }}
               >
                 {item.icon}
@@ -81,8 +106,9 @@ const Sidebar = () => {
               <ListItemText 
                 primary={item.text} 
                 primaryTypographyProps={{
-                  fontSize: '0.95rem',
-                  fontWeight: location.pathname === item.path ? 500 : 400,
+                  fontSize: '0.9rem',
+                  fontWeight: location.pathname === item.path ? 600 : 500,
+                  letterSpacing: '0.02em',
                 }}
               />
             </ListItemButton>
@@ -111,10 +137,9 @@ const Sidebar = () => {
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
             width: drawerWidth,
-            borderRight: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            boxShadow: 1,
+            bgcolor: '#fdfdfd',
+            borderRight: 'none',
+            boxShadow: '2px 0 8px rgba(0,0,0,0.05)',
           },
         }}
       >

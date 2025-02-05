@@ -12,7 +12,7 @@ interface TreatmentCardProps {
 }
 
 const TreatmentCard: React.FC<TreatmentCardProps> = ({ treatments }) => (
-  <Card sx={{ height: '100%' }}>
+  <Card sx={{ height: '100%', bgcolor: '#f8fafd' }}>
     <CardContent>
       <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
         <SpaIcon />

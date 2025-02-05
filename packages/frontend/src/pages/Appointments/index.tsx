@@ -812,8 +812,9 @@ const Appointments = () => {
         borderRadius: '16px',
         overflow: 'hidden',
         boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+        bgcolor: '#ffffff',
         '& .MuiTableCell-root': {
-          borderColor: 'rgba(0,0,0,0.05)',
+          borderColor: 'rgba(0,0,0,0.08)',
         },
       }}
     >
@@ -890,8 +891,9 @@ const Appointments = () => {
                 sx={{ 
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
+                  bgcolor: alpha('#306ad0', 0.02), 
                   '&:hover': {
-                    bgcolor: alpha('#306ad0', 0.04),
+                    bgcolor: alpha('#306ad0', 0.06), 
                   },
                 }}
                 onClick={() => handleOpenDetails(appointment)}
@@ -1164,10 +1166,10 @@ const Appointments = () => {
 
       <Paper 
         sx={{ 
-          p: 3, 
-          mb: 3,
+          p: 3,
           borderRadius: '12px',
           boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
+          bgcolor: '#ffffff',
         }}
       >
         <Grid container spacing={2} alignItems="center">
@@ -1199,7 +1201,7 @@ const Appointments = () => {
           </Grid>
 
           <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
+            <FormControl fullWidth >
               <InputLabel>Status</InputLabel>
               <Select
                 value={statusFilter}
@@ -1282,7 +1284,7 @@ const Appointments = () => {
           </Grid>
 
           <Grid item xs={12} sm={2}>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, }}>
               <Tooltip title="List View">
                 <IconButton 
                   onClick={() => setView('list')}
@@ -1340,7 +1342,7 @@ const Appointments = () => {
                 }}
               />
             ) : (
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, }}>
                 <DatePicker
                   label="Start Date"
                   value={dateRange.start}

@@ -523,7 +523,7 @@ const Patients = () => {
         >
           <Table>
             <TableHead>
-              <TableRow>
+              <TableRow >
                 <TableCell sx={{ fontWeight: 600, color: '#04070b' }}>Name</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#04070b' }}>Date of Birth</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#04070b' }}>Age</TableCell>
@@ -533,7 +533,7 @@ const Patients = () => {
                 <TableCell align="right" sx={{ fontWeight: 600, color: '#04070b' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
-            <TableBody>
+            <TableBody sx={{ bgcolor: '#fbfcfe' }}>
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
