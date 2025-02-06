@@ -281,5 +281,112 @@ export const appointmentController = {
         message: 'Error getting available rooms'
       });
     }
-  }
+  },
+
+  // Get available slots for a specific doctor
+  getDoctorAvailableSlots: async (req: Request, res: Response) => {
+    try {
+      const { doctorId } = req.params;
+      const { date, duration } = req.query;
+      
+      if (!doctorId || !date || !duration) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required parameters: doctorId, date, or duration'
+        });
+      }
+
+      const selectedDate = new Date(date as string);
+      const durationMinutes = parseInt(duration as string);
+
+      // Get doctor's working hours for this day
+      const doctor = await Doctor.findById(doctorId);
+      if (!doctor) {
+        return res.status(404).json({
+          success: false,
+          message: 'Doctor not found'
+        });
+      }
+
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayOfWeek = days[selectedDate.getDay()];
+      const workingDay = doctor.workingDays.get(dayOfWeek);
+
+      if (!workingDay?.isWorking) {
+        return res.json({
+          success: true,
+          data: {
+            availability: {
+              slots: []
+            }
+          }
+        });
+      }
+
+      // Get working hours for the day
+      const workingHours = workingDay.hours;
+      if (!workingHours) {
+        return res.json({
+          success: true,
+          data: {
+            availability: {
+              slots: []
+            }
+          }
+        });
+      }
+
+      // Set up working hours for the day
+      const [startHour, startMinute] = workingHours.start.split(':').map(Number);
+      const [endHour, endMinute] = workingHours.end.split(':').map(Number);
+
+      const dayStart = new Date(selectedDate);
+      dayStart.setHours(startHour, startMinute, 0, 0);
+
+      const dayEnd = new Date(selectedDate);
+      dayEnd.setHours(endHour, endMinute, 0, 0);
+
+      // Get existing appointments for the day
+      const appointments = await Appointment.find({
+        doctor: doctorId,
+        status: { $ne: AppointmentStatus.CANCELED },
+        startTime: { $gte: dayStart },
+        endTime: { $lte: dayEnd }
+      }).sort('startTime');
+
+      // Generate available time slots
+      const slots: Date[] = [];
+      let currentTime = new Date(dayStart);
+
+      while (currentTime.getTime() + durationMinutes * 60000 <= dayEnd.getTime()) {
+        // Check if this slot conflicts with any existing appointment
+        const slotEnd = new Date(currentTime.getTime() + durationMinutes * 60000);
+        const hasConflict = appointments.some(apt => 
+          checkTimeConflict(currentTime, slotEnd, apt.startTime, apt.endTime)
+        );
+
+        if (!hasConflict) {
+          slots.push(new Date(currentTime));
+        }
+
+        // Move to next slot (15-minute intervals)
+        currentTime.setMinutes(currentTime.getMinutes() + 15);
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          availability: {
+            slots: slots.map(slot => slot.toISOString())
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error getting doctor available slots:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error getting available slots'
+      });
+    }
+  },
 };

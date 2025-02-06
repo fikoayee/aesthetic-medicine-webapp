@@ -633,14 +633,9 @@ const seedDatabase = async () => {
 
     const patients = await Promise.all(patientData.map(data => Patient.create(data)));
 
-    // Create appointments from current date minus 1 month to current date plus 2 months
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 1);
-    startDate.setHours(9, 0, 0, 0);
-
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 2);
-    endDate.setHours(17, 0, 0, 0);
+    // Create appointments for 2025
+    const startDate = new Date('2025-02-06T09:00:00.000Z');
+    const endDate = new Date('2025-03-06T17:00:00.000Z');
     
     const appointments: Array<{
       doctor: Types.ObjectId;

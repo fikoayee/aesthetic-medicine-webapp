@@ -14,6 +14,7 @@ export class AppointmentService {
     status?: AppointmentStatus;
   }): Promise<IAppointment[]> {
     try {
+      logger.info('Getting appointments with filters:', filters);
       const query: any = {};
 
       if (filters.startDate || filters.endDate) {
@@ -26,12 +27,40 @@ export class AppointmentService {
       if (filters.patientId) query.patient = new mongoose.Types.ObjectId(filters.patientId);
       if (filters.status) query.status = filters.status;
 
-      return await Appointment.find(query)
-        .populate('doctor', 'firstName lastName')
-        .populate('patient', 'firstName lastName')
-        .populate('treatment', 'name duration')
-        .populate('room', 'name')
+      logger.info('MongoDB query:', JSON.stringify(query));
+
+      // First check if we have any appointments at all
+      const totalAppointments = await Appointment.countDocuments({});
+      logger.info('Total appointments in database:', totalAppointments);
+
+      const appointments = await Appointment.find(query)
+        .populate({
+          path: 'doctor',
+          select: 'firstName lastName specializations',
+          model: 'Doctor'
+        })
+        .populate({
+          path: 'patient',
+          select: 'firstName lastName phoneNumber email address',
+          model: 'Patient'
+        })
+        .populate({
+          path: 'treatment',
+          select: 'name duration price description',
+          model: 'Treatment'
+        })
+        .populate({
+          path: 'room',
+          select: 'name specializations',
+          model: 'Room'
+        })
         .sort({ startTime: 1 });
+
+      logger.info('Found appointments:', appointments.length);
+      if (appointments.length > 0) {
+        logger.info('Sample appointment:', JSON.stringify(appointments[0], null, 2));
+      }
+      return appointments;
     } catch (error) {
       logger.error('Get all appointments error:', error);
       throw error;
@@ -41,10 +70,26 @@ export class AppointmentService {
   static async getAppointmentById(id: string): Promise<IAppointment> {
     try {
       const appointment = await Appointment.findById(id)
-        .populate('doctor', 'firstName lastName')
-        .populate('patient', 'firstName lastName')
-        .populate('treatment', 'name duration')
-        .populate('room', 'name');
+        .populate({
+          path: 'doctor',
+          select: 'firstName lastName specializations',
+          model: 'Doctor'
+        })
+        .populate({
+          path: 'patient',
+          select: 'firstName lastName phoneNumber email address',
+          model: 'Patient'
+        })
+        .populate({
+          path: 'treatment',
+          select: 'name duration price description',
+          model: 'Treatment'
+        })
+        .populate({
+          path: 'room',
+          select: 'name specializations',
+          model: 'Room'
+        });
 
       if (!appointment) {
         throw new ApiError(404, 'Appointment not found');

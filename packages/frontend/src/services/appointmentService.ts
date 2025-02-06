@@ -49,6 +49,14 @@ export interface DoctorAvailability {
   }[];
 }
 
+export interface AppointmentFilters {
+  startDate?: Date;
+  endDate?: Date;
+  doctorId?: string;
+  patientId?: string;
+  status?: AppointmentStatus;
+}
+
 const createAppointment = async (data: CreateAppointmentData): Promise<Appointment> => {
   try {
     // If we have a new patient, create them first
@@ -177,8 +185,56 @@ const updateAppointmentStatus = async (appointmentId: string, status: Appointmen
   }
 };
 
+const getAppointments = async (filters: AppointmentFilters): Promise<Appointment[]> => {
+  try {
+    const requestParams: Record<string, any> = {};
+    
+    if (filters.startDate) requestParams.startDate = filters.startDate.toISOString();
+    if (filters.endDate) requestParams.endDate = filters.endDate.toISOString();
+    if (filters.doctorId) requestParams.doctorId = filters.doctorId;
+    if (filters.patientId) requestParams.patientId = filters.patientId;
+    if (filters.status) requestParams.status = filters.status;
+
+    console.log('Fetching appointments with params:', requestParams);
+    
+    const response = await axiosInstance.get<ApiResponse<{ appointments: Appointment[] }>>('/appointments', {
+      params: requestParams
+    });
+
+    console.log('Raw API response:', response.data);
+    
+    if (response.data.data?.appointments) {
+      console.log('First appointment data:', response.data.data.appointments[0]);
+      return response.data.data.appointments;
+    }
+    return [];
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
+    throw error;
+  }
+};
+
+const getAvailableSlots = async (doctorId: string, date: string, duration: number, roomId?: string) => {
+  try {
+    const response = await axiosInstance.get<ApiResponse<{ availability: { slots: string[] } }>>(`/appointments/doctors/${doctorId}/available-slots`, {
+      params: {
+        date,
+        duration,
+        roomId
+      }
+    });
+    return {
+      slots: response.data.data.availability.slots || []
+    };
+  } catch (error) {
+    console.error('Error getting available slots:', error);
+    return { slots: [] };
+  }
+};
+
 export const appointmentService = {
   createAppointment,
+  checkForConflicts,
   getDoctors,
   getTreatments,
   getRooms,
@@ -186,7 +242,8 @@ export const appointmentService = {
   getDoctorAvailability,
   getAvailableDoctorsForTreatment,
   getAvailableRoomsForTreatment,
-  checkForConflicts,
   getDoctorAppointments,
-  updateAppointmentStatus
+  updateAppointmentStatus,
+  getAppointments,
+  getAvailableSlots
 };

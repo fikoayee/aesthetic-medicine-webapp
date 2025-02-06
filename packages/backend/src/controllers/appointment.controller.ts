@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { AppointmentService } from '../services/appointment.service';
 import { ApiError } from '../middleware/error.middleware';
 import { AppointmentStatus } from '../models/Appointment';
+import { Doctor } from '../models/Doctor';
+import { Appointment } from '../models/Appointment';
 
 export class AppointmentController {
   static async getAllAppointments(req: Request, res: Response, next: NextFunction) {
@@ -112,22 +114,204 @@ export class AppointmentController {
 
   static async getAvailableSlots(req: Request, res: Response, next: NextFunction) {
     try {
-      const { doctorId, date, duration } = req.query;
-
-      if (!doctorId || !date || !duration) {
-        throw new ApiError(400, 'Missing required query parameters');
+      const { doctorId } = req.params;
+      const { date, duration, roomId } = req.query;
+      
+      if (!date || !duration) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required parameters: date or duration'
+        });
       }
 
-      const slots = await AppointmentService.getAvailableSlots(
-        doctorId as string,
-        new Date(date as string),
-        parseInt(duration as string)
-      );
+      const selectedDate = new Date(date as string);
+      const durationMinutes = parseInt(duration as string);
 
-      res.json(slots);
+      // If doctorId is provided, get slots for specific doctor
+      if (doctorId) {
+        const doctor = await Doctor.findById(doctorId);
+        if (!doctor) {
+          return res.status(404).json({
+            success: false,
+            message: 'Doctor not found'
+          });
+        }
+
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayOfWeek = days[selectedDate.getDay()];
+        const workingDay = doctor.workingDays.get(dayOfWeek);
+
+        if (!workingDay?.isWorking) {
+          return res.json({
+            success: true,
+            data: {
+              availability: {
+                slots: []
+              }
+            }
+          });
+        }
+
+        // Get working hours for the day
+        const workingHours = workingDay.hours;
+        if (!workingHours) {
+          return res.json({
+            success: true,
+            data: {
+              availability: {
+                slots: []
+              }
+            }
+          });
+        }
+
+        // Set up working hours for the day
+        const [startHour, startMinute] = workingHours.start.split(':').map(Number);
+        const [endHour, endMinute] = workingHours.end.split(':').map(Number);
+
+        const dayStart = new Date(selectedDate);
+        dayStart.setHours(startHour, startMinute, 0, 0);
+
+        const dayEnd = new Date(selectedDate);
+        dayEnd.setHours(endHour, endMinute, 0, 0);
+
+        // Get existing appointments for both doctor and room
+        const doctorAppointments = await Appointment.find({
+          doctor: doctorId,
+          status: { $ne: AppointmentStatus.CANCELED },
+          startTime: { $gte: dayStart },
+          endTime: { $lte: dayEnd }
+        }).sort('startTime');
+
+        let roomAppointments: any[] = [];
+        if (roomId) {
+          roomAppointments = await Appointment.find({
+            room: roomId,
+            status: { $ne: AppointmentStatus.CANCELED },
+            startTime: { $gte: dayStart },
+            endTime: { $lte: dayEnd }
+          }).sort('startTime');
+        }
+
+        // Generate available time slots
+        const slots: Date[] = [];
+        let currentTime = new Date(dayStart);
+
+        while (currentTime.getTime() + durationMinutes * 60000 <= dayEnd.getTime()) {
+          // Check if this slot conflicts with any existing appointment
+          const slotEnd = new Date(currentTime.getTime() + durationMinutes * 60000);
+          
+          const hasDoctorConflict = doctorAppointments.some(apt => 
+            (apt.startTime < slotEnd && apt.endTime > currentTime)
+          );
+
+          const hasRoomConflict = roomId ? roomAppointments.some(apt => 
+            (apt.startTime < slotEnd && apt.endTime > currentTime)
+          ) : false;
+
+          if (!hasDoctorConflict && !hasRoomConflict) {
+            slots.push(new Date(currentTime));
+          }
+
+          // Move to next slot (15-minute intervals)
+          currentTime.setMinutes(currentTime.getMinutes() + 15);
+        }
+
+        return res.json({
+          success: true,
+          data: {
+            availability: {
+              slots: slots.map(slot => slot.toISOString())
+            }
+          }
+        });
+      }
+
+      // If no doctorId, return all available slots for all doctors (original functionality)
+      const doctors = await Doctor.find();
+      const availability = [];
+
+      for (const doctor of doctors) {
+        const slots = await AppointmentController.getDoctorSlots(doctor, selectedDate, durationMinutes, roomId as string);
+        if (slots.length > 0) {
+          availability.push({
+            doctorId: doctor._id,
+            availableSlots: slots.map(slot => ({
+              startTime: slot.toISOString()
+            }))
+          });
+        }
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          availability
+        }
+      });
+
     } catch (error) {
       next(error);
     }
+  }
+
+  private static async getDoctorSlots(doctor: any, date: Date, duration: number, roomId?: string): Promise<Date[]> {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayOfWeek = days[date.getDay()];
+    const workingDay = doctor.workingDays.get(dayOfWeek);
+
+    if (!workingDay?.isWorking || !workingDay.hours) {
+      return [];
+    }
+
+    const [startHour, startMinute] = workingDay.hours.start.split(':').map(Number);
+    const [endHour, endMinute] = workingDay.hours.end.split(':').map(Number);
+
+    const dayStart = new Date(date);
+    dayStart.setHours(startHour, startMinute, 0, 0);
+
+    const dayEnd = new Date(date);
+    dayEnd.setHours(endHour, endMinute, 0, 0);
+
+    const doctorAppointments = await Appointment.find({
+      doctor: doctor._id,
+      status: { $ne: AppointmentStatus.CANCELED },
+      startTime: { $gte: dayStart },
+      endTime: { $lte: dayEnd }
+    }).sort('startTime');
+
+    let roomAppointments: any[] = [];
+    if (roomId) {
+      roomAppointments = await Appointment.find({
+        room: roomId,
+        status: { $ne: AppointmentStatus.CANCELED },
+        startTime: { $gte: dayStart },
+        endTime: { $lte: dayEnd }
+      }).sort('startTime');
+    }
+
+    const slots: Date[] = [];
+    let currentTime = new Date(dayStart);
+
+    while (currentTime.getTime() + duration * 60000 <= dayEnd.getTime()) {
+      const slotEnd = new Date(currentTime.getTime() + duration * 60000);
+      
+      const hasDoctorConflict = doctorAppointments.some(apt => 
+        (apt.startTime < slotEnd && apt.endTime > currentTime)
+      );
+
+      const hasRoomConflict = roomId ? roomAppointments.some(apt => 
+        (apt.startTime < slotEnd && apt.endTime > currentTime)
+      ) : false;
+
+      if (!hasDoctorConflict && !hasRoomConflict) {
+        slots.push(new Date(currentTime));
+      }
+
+      currentTime.setMinutes(currentTime.getMinutes() + 15);
+    }
+
+    return slots;
   }
 
   static async checkForConflicts(req: Request, res: Response, next: NextFunction) {

@@ -36,11 +36,14 @@ import { Doctor } from '../../types/doctor';
 import { Treatment } from '../../types/treatment';
 import { Room } from '../../types/room';
 import { Patient } from '../../types/patient';
+import axiosInstance from '@/services/authService';
+import { ApiResponse } from '@/services/treatmentService';
 
 interface AppointmentModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  onAppointmentCreated?: () => void;
 }
 
 const initialAppointmentData: AppointmentFormData = {
@@ -67,7 +70,7 @@ const initialNewPatientData: NewPatientData = {
   },
 };
 
-const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSuccess }) => {
+const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSuccess, onAppointmentCreated }) => {
   const [loading, setLoading] = useState(false);
   const [patientType, setPatientType] = useState<'existing' | 'new'>('existing');
   const [appointmentData, setAppointmentData] = useState<AppointmentFormData>(initialAppointmentData);
@@ -86,6 +89,10 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
   const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+
+  const [hasConflicts, setHasConflicts] = useState(false);
+
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -181,28 +188,11 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
 
   useEffect(() => {
     const fetchDoctorAvailability = async () => {
-      if (selectedDate && appointmentData.doctorId) {
+      if (selectedDate && appointmentData.doctorId && appointmentData.treatmentId && appointmentData.roomId) {
         try {
           const formattedDate = format(selectedDate, 'yyyy-MM-dd');
           console.log('Fetching availability for date:', formattedDate);
           
-          const availability = await appointmentService.getDoctorAvailability(formattedDate);
-          console.log('Received availability:', availability);
-          
-          if (!availability || availability.length === 0) {
-            toast.info('No availability found for selected date');
-            return;
-          }
-          
-          const doctorSlots = availability.find(a => a.doctorId === appointmentData.doctorId)?.availableSlots || [];
-          if (doctorSlots.length === 0) {
-            toast.info('No available slots for selected date');
-            return;
-          }
-
-          const availableTimeSlots = doctorSlots.map(slot => slot.startTime);
-          console.log('Available time slots:', availableTimeSlots);
-
           const selectedTreatment = treatments.find(t => t._id === appointmentData.treatmentId);
           if (!selectedTreatment) {
             console.error('Selected treatment not found');
@@ -210,38 +200,36 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
             return;
           }
 
-          const treatmentDuration = selectedTreatment.duration;
-          console.log('Treatment duration:', treatmentDuration);
+          const response = await appointmentService.getAvailableSlots(
+            appointmentData.doctorId,
+            formattedDate,
+            selectedTreatment.duration,
+            appointmentData.roomId
+          );
           
-          const slots: string[] = [];
-          availableTimeSlots.forEach(slot => {
-            try {
-              const startTime = new Date(slot);
-              const endTime = new Date(startTime.getTime() + treatmentDuration * 60000); // Convert minutes to milliseconds
-              slots.push(startTime.toISOString());
-            } catch (error) {
-              console.error('Error processing time slot:', error);
-            }
-          });
+          console.log('Received availability:', response);
           
-          console.log('Generated available time slots:', slots);
-          if (slots.length === 0) {
-            toast.info('No suitable time slots found for selected treatment duration');
+          if (!response.slots || response.slots.length === 0) {
+            toast.info('No available slots for selected date and room');
+            setAvailableTimeSlots([]);
+            return;
           }
-          setAppointmentData(prev => ({
-            ...prev,
-            startTime: slots[0],
-            endTime: new Date(new Date(slots[0]).getTime() + treatmentDuration * 60000).toISOString()
-          }));
+          
+          console.log('Available time slots:', response.slots);
+          setAvailableTimeSlots(response.slots);
+          
         } catch (error) {
           console.error('Error fetching doctor availability:', error);
           toast.error('Error checking doctor availability. Please try again.');
+          setAvailableTimeSlots([]);
         }
+      } else {
+        setAvailableTimeSlots([]);
       }
     };
 
     fetchDoctorAvailability();
-  }, [selectedDate, appointmentData.doctorId, treatments]);
+  }, [selectedDate, appointmentData.doctorId, appointmentData.treatmentId, appointmentData.roomId, treatments]);
 
   useEffect(() => {
     const checkConflicts = async () => {
@@ -260,6 +248,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
             appointmentData.startTime,
             appointmentData.endTime
           );
+          setHasConflicts(conflicts.length > 0);
           if (conflicts.length > 0) {
             toast.error('Time slot conflicts detected');
           }
@@ -428,6 +417,16 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const resetModalState = () => {
+    setSelectedDate(null);
+    setAppointmentData(initialAppointmentData);
+    setSelectedPatient(null);
+    setNewPatientData(initialNewPatientData);
+    setAvailableTimeSlots([]);
+    setPatientSearchInput('');
+    setPatients([]);
+  };
+
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
@@ -463,8 +462,11 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
 
       await appointmentService.createAppointment(createData);
       toast.success('Appointment created successfully');
-      onSuccess?.();
+      resetModalState();
       onClose();
+      if (onAppointmentCreated) {
+        onAppointmentCreated();
+      }
     } catch (error) {
       console.error('Error creating appointment:', error);
       toast.error('Failed to create appointment');
@@ -700,6 +702,64 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
           </Grid>
 
           <Grid item xs={12}>
+            <FormControl fullWidth error={!!errors.startTime}>
+              <InputLabel>Available Time Slots</InputLabel>
+              <Select
+                value={appointmentData.startTime}
+                onChange={(e) => {
+                  const startTime = e.target.value;
+                  const selectedTreatment = treatments.find(t => t._id === appointmentData.treatmentId);
+                  if (selectedTreatment && startTime) {
+                    const endTime = new Date(new Date(startTime).getTime() + selectedTreatment.duration * 60000).toISOString();
+                    handleAppointmentDataChange('startTime', startTime);
+                    handleAppointmentDataChange('endTime', endTime);
+                  }
+                }}
+                label="Available Time Slots"
+                disabled={!selectedDate || !appointmentData.doctorId || !appointmentData.treatmentId || loading}
+              >
+                {availableTimeSlots.map((slot) => (
+                  <MenuItem key={slot} value={slot}>
+                    {format(new Date(slot), 'p')}
+                  </MenuItem>
+                ))}
+                {availableTimeSlots.length === 0 && (
+                  <MenuItem disabled value="">
+                    No available slots
+                  </MenuItem>
+                )}
+              </Select>
+              <FormHelperText>
+                {!selectedDate ? 'Please select a date first' : 
+                 !appointmentData.doctorId ? 'Please select a doctor' :
+                 !appointmentData.treatmentId ? 'Please select a treatment' :
+                 availableTimeSlots.length === 0 ? 'No available slots for selected date' :
+                 'Select a time slot'}
+              </FormHelperText>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Start Time"
+              value={appointmentData.startTime ? format(new Date(appointmentData.startTime), 'PPpp') : ''}
+              disabled
+              helperText="Selected start time"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="End Time"
+              value={appointmentData.endTime ? format(new Date(appointmentData.endTime), 'PPpp') : ''}
+              disabled
+              helperText="End time is calculated based on treatment duration"
+            />
+          </Grid>
+
+          <Grid item xs={12}>
             <FormControl fullWidth>
               <InputLabel>Treatment</InputLabel>
               <Select
@@ -780,25 +840,6 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Start Time"
-              value={appointmentData.startTime ? format(new Date(appointmentData.startTime), 'PPpp') : ''}
-              disabled
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="End Time"
-              value={appointmentData.endTime ? format(new Date(appointmentData.endTime), 'PPpp') : ''}
-              disabled
-              helperText="End time is calculated based on treatment duration"
-            />
           </Grid>
 
           <Grid item xs={12} sm={6}>
@@ -916,10 +957,15 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ open, onClose, onSu
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
         <Button onClick={onClose}>Cancel</Button>
+        {hasConflicts && (
+          <Typography color="error" sx={{ mr: 2 }}>
+            Cannot create appointment: Time slot conflicts detected
+          </Typography>
+        )}
         <Button 
           onClick={handleSubmit} 
           variant="contained" 
-          disabled={isSubmitting}
+          disabled={isSubmitting || hasConflicts}
           startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
         >
           Create Appointment

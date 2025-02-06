@@ -24,7 +24,8 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Grid
+  Grid,
+  CircularProgress
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -45,6 +46,17 @@ import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PersonIcon from '@mui/icons-material/Person';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
+import { appointmentService } from '../../services/appointmentService';
+import { Appointment } from '../../types/appointment';
+
+function formatMinutes(minutes: number): string {
+  if (minutes < 60) {
+    return `${Math.ceil(minutes / 15) * 15} minutes`;
+  } else {
+    const hours = minutes / 60;
+    return `${hours} hour(s)`;
+  }
+}
 
 // Constants
 const START_HOUR = 8;  // 8 AM
@@ -56,29 +68,24 @@ const ItemTypes = {
 };
 
 const APPOINTMENT_STATUS = {
-  SCHEDULED: 'scheduled',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled',
-  NO_SHOW: 'no_show'
+  SCHEDULED: 'booked',
+  CANCELED: 'canceled',
+  ONGOING: 'ongoing',
 } as const;
 
 type AppointmentStatus = typeof APPOINTMENT_STATUS[keyof typeof APPOINTMENT_STATUS];
 
 const STATUS_COLORS = {
   [APPOINTMENT_STATUS.SCHEDULED]: 'info',
-  [APPOINTMENT_STATUS.IN_PROGRESS]: 'warning',
-  [APPOINTMENT_STATUS.COMPLETED]: 'success',
-  [APPOINTMENT_STATUS.CANCELLED]: 'error',
-  [APPOINTMENT_STATUS.NO_SHOW]: 'error'
+  [APPOINTMENT_STATUS.CANCELED]: 'warning',
+  [APPOINTMENT_STATUS.ONGOING]: 'success',
+
 } as const;
 
 const STATUS_LABELS = {
-  [APPOINTMENT_STATUS.SCHEDULED]: 'Scheduled',
-  [APPOINTMENT_STATUS.IN_PROGRESS]: 'In Progress',
-  [APPOINTMENT_STATUS.COMPLETED]: 'Completed',
-  [APPOINTMENT_STATUS.CANCELLED]: 'Cancelled',
-  [APPOINTMENT_STATUS.NO_SHOW]: 'No Show'
+  [APPOINTMENT_STATUS.SCHEDULED]: 'booked',
+  [APPOINTMENT_STATUS.CANCELED]: 'canceled',
+  [APPOINTMENT_STATUS.ONGOING]: 'ongoing',
 } as const;
 
 const ROOMS = [
@@ -166,7 +173,7 @@ const AppointmentBlock = ({
   appointment,
   onMove 
 }: { 
-  appointment: typeof MOCK_APPOINTMENTS[0];
+  appointment: Appointment;
   onMove: (id: string, roomId: string, hour: number, minutes: number) => void;
 }) => {
   const startTime = parseISO(appointment.startTime);
@@ -196,7 +203,7 @@ const AppointmentBlock = ({
       title={
         <Box sx={{ p: 1 }}>
           <Typography sx={{ fontWeight: 600, color: '#fff', mb: 1 }}>
-            {appointment.treatmentName}
+            {appointment.treatment.name}
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -446,9 +453,12 @@ const TimeSlot = ({
 };
 
 const Appointments = () => {
-  const [appointments, setAppointments] = useState(MOCK_APPOINTMENTS);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [dateRange, setDateRange] = useState<{start: Date | null, end: Date | null}>({
     start: null,
     end: null
@@ -456,12 +466,52 @@ const Appointments = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all');
   const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
-  const [selectedAppointment, setSelectedAppointment] = useState<typeof MOCK_APPOINTMENTS[0] | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const navigate = useNavigate();
 
   // Get unique doctors from appointments
-  const doctors = [...new Set(appointments.map(apt => apt.doctorName))];
+  const doctors = Array.isArray(appointments) 
+    ? [...new Set(appointments.map(apt => `${apt.doctor?.firstName} ${apt.doctor?.lastName}`))]
+    : [];
+
+  const fetchAppointments = async (isInitial = false) => {
+    try {
+      if (isInitial) {
+        setInitialLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+
+      const today = startOfDay(new Date());
+      const nextWeek = new Date(today);
+      nextWeek.setDate(today.getDate() + 7);
+      
+      console.log('Fetching appointments for date range:', {
+        startDate: today.toISOString(),
+        endDate: nextWeek.toISOString()
+      });
+
+      const appointments = await appointmentService.getAppointments({
+        startDate: today,
+        endDate: nextWeek
+      });
+      
+      console.log('Received appointments:', appointments);
+      setAppointments(appointments);
+      setError(null);
+    } catch (err) {
+      console.error('Error in fetchAppointments:', err);
+      setError('Failed to fetch appointments');
+    } finally {
+      setInitialLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAppointments(true);
+  }, []);
 
   const handleCreateAppointment = () => {
     setIsModalOpen(true);
@@ -491,40 +541,52 @@ const Appointments = () => {
     });
   };
 
+  const handleAppointmentClick = (appointment: Appointment) => {
+    setSelectedDate(parseISO(appointment.startTime));
+    setView('calendar');
+  };
+
+  const handleOpenDetails = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+  };
+
+  const handleAppointmentCreated = () => {
+    // Only refresh the data, don't show loading state
+    fetchAppointments(false);
+  };
+
   // Filter appointments based on all criteria
-  const filteredAppointments = appointments.filter(apt => {
-    const matchesSearch = searchQuery === '' || 
-      apt.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.treatmentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.doctorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.patientEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.patientPhone.includes(searchQuery);
+  const filteredAppointments = Array.isArray(appointments) ? appointments.filter(apt => {
+    const matchesSearch = !searchQuery ? true : (
+      apt.treatment?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      `${apt.doctor?.firstName} ${apt.doctor?.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      apt.patient?.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (apt.patient?.phoneNumber?.includes(searchQuery) || '')
+    );
 
     const matchesStatus = statusFilter === 'all' || apt.status === statusFilter;
     
-    const matchesDoctors = selectedDoctors.length === 0 || selectedDoctors.includes(apt.doctorName);
+    const matchesDoctors = selectedDoctors.length === 0 || 
+      selectedDoctors.includes(`${apt.doctor?.firstName} ${apt.doctor?.lastName}`);
 
     const matchesDateRange = !dateRange.start || !dateRange.end ? true :
-      isWithinInterval(parseISO(apt.startTime), {
+      isWithinInterval(new Date(apt.startTime), {
         start: startOfDay(dateRange.start),
         end: endOfDay(dateRange.end)
       });
 
     const matchesDate = selectedDate && view === 'calendar' ? 
-      isSameDay(parseISO(apt.startTime), selectedDate) : 
+      isSameDay(new Date(apt.startTime), selectedDate) : 
       true;
 
     return matchesSearch && matchesDate && matchesStatus && matchesDoctors && matchesDateRange;
-  });
+  }) : [];
 
-  const handleAppointmentClick = (appointment: typeof MOCK_APPOINTMENTS[0]) => {
-    setSelectedDate(parseISO(appointment.startTime));
-    setView('calendar');
-  };
-
-  const handleOpenDetails = (appointment: typeof MOCK_APPOINTMENTS[0]) => {
-    setSelectedAppointment(appointment);
-  };
+  // Log whenever appointments or filtered appointments change
+  useEffect(() => {
+    console.log('Current appointments:', appointments);
+    console.log('Filtered appointments:', filteredAppointments);
+  }, [appointments, filteredAppointments]);
 
   const renderAppointmentDetails = () => {
     if (!selectedAppointment) return null;
@@ -599,13 +661,13 @@ const Appointments = () => {
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 2, alignItems: 'center' }}>
                   <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Name:</Typography>
-                  <Typography sx={{ color: '#04070b', fontWeight: 500 }}>{selectedAppointment.patientName}</Typography>
+                  <Typography sx={{ color: '#04070b', fontWeight: 500 }}>{selectedAppointment.patient?.firstName} {selectedAppointment.patient?.lastName}</Typography>
                   
                   <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Email:</Typography>
-                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.patientEmail}</Typography>
+                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.patient?.email}</Typography>
                   
                   <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Phone:</Typography>
-                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.patientPhone}</Typography>
+                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.patient?.phoneNumber}</Typography>
                 </Box>
               </Paper>
 
@@ -615,25 +677,25 @@ const Appointments = () => {
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 2, alignItems: 'center' }}>
                   <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Treatment:</Typography>
-                  <Typography sx={{ color: '#04070b', fontWeight: 500 }}>{selectedAppointment.treatmentName}</Typography>
+                  <Typography sx={{ color: '#04070b', fontWeight: 500 }}>{selectedAppointment.treatment?.name}</Typography>
                   
                   <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Duration:</Typography>
-                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.treatmentDuration}</Typography>
+                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.treatment?.duration}</Typography>
                   
                   <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Price:</Typography>
-                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.treatmentPrice}</Typography>
+                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.treatment?.price}</Typography>
                   
                   <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Doctor:</Typography>
                   <Box>
-                    <Typography sx={{ color: '#04070b', fontWeight: 500 }}>{selectedAppointment.doctorName}</Typography>
+                    <Typography sx={{ color: '#04070b', fontWeight: 500 }}>{selectedAppointment.doctor?.firstName} {selectedAppointment.doctor?.lastName}</Typography>
                     <Typography variant="body2" sx={{ color: '#04070b', opacity: 0.7 }}>
-                      {selectedAppointment.doctorSpecialty}
+                      {selectedAppointment.doctor?.specialty}
                     </Typography>
                   </Box>
                   
                   <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Room:</Typography>
                   <Chip 
-                    label={ROOMS.find(r => r.id === selectedAppointment.roomId)?.name}
+                    label={selectedAppointment.room?.name}
                     size="small"
                     sx={{
                       bgcolor: '#dddbff',
@@ -648,12 +710,12 @@ const Appointments = () => {
                 </Box>
               </Paper>
 
-              {selectedAppointment.notes && (
+              {selectedAppointment.note && (
                 <Paper sx={{ p: 3, borderRadius: '12px', boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)' }}>
                   <Typography variant="subtitle1" sx={{ color: '#306ad0', fontWeight: 600, mb: 2 }}>
                     Notes
                   </Typography>
-                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.notes}</Typography>
+                  <Typography sx={{ color: '#04070b' }}>{selectedAppointment.note}</Typography>
                 </Paper>
               )}
             </Box>
@@ -698,7 +760,7 @@ const Appointments = () => {
     );
   };
 
-  const renderAppointmentPreview = (appointment: typeof MOCK_APPOINTMENTS[0]) => (
+  const renderAppointmentPreview = (appointment: Appointment) => (
     <Paper sx={{ 
       p: 2.5,
       maxWidth: 400,
@@ -720,7 +782,7 @@ const Appointments = () => {
         </Box>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 600, color: '#04070b', mb: 0.5 }}>
-            {appointment.treatmentName}
+            {appointment.treatment?.name}
           </Typography>
           <Chip 
             label={STATUS_LABELS[appointment.status]}
@@ -758,10 +820,10 @@ const Appointments = () => {
             </Typography>
           </Box>
           <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
-            {ROOMS.find(r => r.id === appointment.roomId)?.name}
+            {appointment.room?.name}
           </Typography>
           <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
-            {appointment.treatmentDuration}
+            {formatMinutes(appointment.treatment?.duration)}
           </Typography>
         </Grid>
       </Grid>
@@ -781,10 +843,10 @@ const Appointments = () => {
             </Typography>
           </Box>
           <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
-            {appointment.patientName}
+            {`${appointment.patient?.firstName} ${appointment.patient?.lastName}`}
           </Typography>
           <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
-            {appointment.patientPhone}
+            {appointment.patient?.phoneNumber}
           </Typography>
         </Box>
         <Box sx={{ flex: 1 }}>
@@ -795,10 +857,10 @@ const Appointments = () => {
             </Typography>
           </Box>
           <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
-            {appointment.doctorName}
+            {appointment.doctor?.firstName} {appointment.doctor?.lastName}
           </Typography>
           <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
-            {appointment.doctorSpecialty}
+            {appointment.doctor?.specialty}
           </Typography>
         </Box>
       </Box>
@@ -910,47 +972,47 @@ const Appointments = () => {
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
-                    {appointment.patientName}
+                    {`${appointment.patient?.firstName} ${appointment.patient?.lastName}`}
                   </Typography>
                 </TableCell>
                 <TableCell>
                   <Box>
                     <Typography variant="body2" sx={{ color: '#04070b' }}>
-                      {appointment.patientEmail}
+                      {appointment.patient?.email}
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#666' }}>
-                      {appointment.patientPhone}
+                      {appointment.patient?.phoneNumber}
                     </Typography>
                   </Box>
                 </TableCell>
                 <TableCell>
                   <Box>
                     <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
-                      {appointment.treatmentName}
+                      {appointment.treatment?.name}
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#666' }}>
-                      {appointment.treatmentDuration}
+                      {formatMinutes(appointment.treatment?.duration)}
                     </Typography>
                   </Box>
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
-                    {appointment.treatmentPrice}
+                    {appointment.treatment?.price}
                   </Typography>
                 </TableCell>
                 <TableCell>
                   <Box>
                     <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
-                      {appointment.doctorName}
+                      {appointment.doctor?.firstName} {appointment.doctor?.lastName}
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#666' }}>
-                      {appointment.doctorSpecialty}
+                      {/* {appointment.doctor?.specializations?.map(s => s).join(', ')} */}
                     </Typography>
                   </Box>
                 </TableCell>
                 <TableCell>
                   <Chip 
-                    label={ROOMS.find(r => r.id === appointment.roomId)?.name} 
+                    label={appointment.room.name.slice(-3)} 
                     size="small"
                     variant="outlined"
                     sx={{ 
@@ -964,7 +1026,7 @@ const Appointments = () => {
                 </TableCell>
                 <TableCell>
                   <Chip 
-                    label={STATUS_LABELS[appointment.status]}
+                    label={appointment.status}
                     size="small"
                     color={STATUS_COLORS[appointment.status]}
                     sx={{ 
@@ -1111,10 +1173,10 @@ const Appointments = () => {
             ))}
 
             {filteredAppointments
-              .filter(apt => apt.roomId === room.id)
+              .filter(apt => apt.room._id === room.id)
               .map(appointment => (
                 <AppointmentBlock 
-                  key={appointment.id} 
+                  key={appointment._id} 
                   appointment={appointment}
                   onMove={handleMoveAppointment}
                 />
@@ -1392,7 +1454,17 @@ const Appointments = () => {
       </Paper>
 
       <Box sx={{ mt: 3 }}>
-        {view === 'list' ? renderListView() : renderCalendarView()}
+        {initialLoading ? (
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+            <Typography color="error">{error}</Typography>
+          </Box>
+        ) : (
+          view === 'list' ? renderListView() : renderCalendarView()
+        )}
       </Box>
 
       {renderAppointmentDetails()}
@@ -1400,10 +1472,7 @@ const Appointments = () => {
       <AppointmentModal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSubmit={() => {
-          // Handle appointment creation
-          setIsModalOpen(false);
-        }}
+        onAppointmentCreated={handleAppointmentCreated}
       />
     </Box>
   );

@@ -11,10 +11,36 @@ export enum PaymentStatus {
 
 export interface Appointment {
   _id: string;
-  doctor: string;
-  patient: string;
-  treatment: string;
-  room: string;
+  doctor: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    specializations: string[];
+  };
+  patient: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    email: string;
+    address?: {
+      street: string;
+      city: string;
+      postalCode: string;
+    };
+  };
+  treatment: {
+    _id: string;
+    name: string;
+    duration: number;
+    price: number;
+    description?: string;
+  };
+  room: {
+    _id: string;
+    name: string;
+    specializations: string[];
+  };
   startTime: string;
   endTime: string;
   price: number;

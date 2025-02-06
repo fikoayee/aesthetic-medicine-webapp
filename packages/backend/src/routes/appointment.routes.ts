@@ -11,6 +11,9 @@ router.use(authenticate);
 // Get available slots (must be before /:id to prevent conflict)
 router.get('/available-slots', AppointmentController.getAvailableSlots);
 
+// Get doctor's available slots
+router.get('/doctors/:doctorId/available-slots', AppointmentController.getAvailableSlots);
+
 // Check for conflicts
 router.post('/check-conflicts', AppointmentController.checkForConflicts);
 
