@@ -415,20 +415,17 @@ const TimeSlot = ({
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [dateRange, setDateRange] = useState<{start: Date | null, end: Date | null}>({
-    start: null,
-    end: null
+    start: startOfDay(new Date()),
+    end: endOfDay(new Date())
   });
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all');
   const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [view, setView] = useState<'list' | 'calendar'>('list');
+  const [view, setView] = useState<'list' | 'calendar'>('calendar');
   const navigate = useNavigate();
 
   // Get unique doctors from appointments
@@ -436,46 +433,47 @@ const Appointments = () => {
     ? [...new Set(appointments.map(apt => `${apt.doctor?.firstName} ${apt.doctor?.lastName}`))]
     : [];
 
-  const fetchAppointments = async (isInitial = false) => {
+  useEffect(() => {
+    fetchAppointments();
+  }, [dateRange]);
+
+  const fetchAppointments = async () => {
+    setLoading(true);
     try {
-      if (isInitial) {
-        setInitialLoading(true);
-      } else {
-        setIsRefreshing(true);
+      const filters: any = {};
+      if (dateRange.start) {
+        filters.startDate = dateRange.start;
       }
-
-      const today = startOfDay(new Date());
-      const nextWeek = new Date(today);
-      nextWeek.setDate(today.getDate() + 7);
+      if (dateRange.end) {
+        filters.endDate = dateRange.end;
+      }
+      console.log('Fetching with filters:', filters);
+      const data = await appointmentService.getAppointments(filters);
+      console.log('Received appointments:', data);
       
-      console.log('Fetching appointments for date range:', {
-        startDate: today.toISOString(),
-        endDate: nextWeek.toISOString()
-      });
-
-      const appointments = await appointmentService.getAppointments({
-        startDate: today,
-        endDate: nextWeek
-      });
+      // Ensure we have an array of appointments
+      const appointmentsArray = Array.isArray(data) ? data : 
+                              Array.isArray(data?.appointments) ? data.appointments : [];
       
-      console.log('Received appointments:', appointments);
-      setAppointments(appointments);
-      setError(null);
-    } catch (err) {
-      console.error('Error in fetchAppointments:', err);
-      setError('Failed to fetch appointments');
+      console.log('Setting appointments:', appointmentsArray);
+      setAppointments(appointmentsArray);
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      setAppointments([]);
     } finally {
-      setInitialLoading(false);
-      setIsRefreshing(false);
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchAppointments(true);
-  }, []);
+  const handleDateRangeChange = (type: 'start' | 'end', date: Date | null) => {
+    setDateRange(prev => ({
+      ...prev,
+      [type]: date ? (type === 'start' ? startOfDay(date) : endOfDay(date)) : null
+    }));
+  };
 
   const handleCreateAppointment = () => {
-    setIsModalOpen(true);
+    navigate('/appointments/create');
   };
 
   const handleMoveAppointment = (id: string, roomId: string, hour: number, minutes: number) => {
@@ -513,41 +511,34 @@ const Appointments = () => {
 
   const handleAppointmentCreated = () => {
     // Only refresh the data, don't show loading state
-    fetchAppointments(false);
+    fetchAppointments();
   };
 
-  // Filter appointments based on all criteria
-  const filteredAppointments = Array.isArray(appointments) ? appointments.filter(apt => {
-    const matchesSearch = !searchQuery ? true : (
-      apt.treatment?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      `${apt.doctor?.firstName} ${apt.doctor?.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.patient?.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (apt.patient?.phoneNumber?.includes(searchQuery) || '')
-    );
-
-    const matchesStatus = statusFilter === 'all' || apt.status === statusFilter;
+  // Filter appointments based on search and date range
+  const filteredAppointments = (appointments || []).filter(appointment => {
+    if (!appointment) return false;
     
-    const matchesDoctors = selectedDoctors.length === 0 || 
-      selectedDoctors.includes(`${apt.doctor?.firstName} ${apt.doctor?.lastName}`);
+    try {
+      const appointmentDate = parseISO(appointment.startTime);
+      const matchesDateRange = (!dateRange.start || appointmentDate >= dateRange.start) &&
+                             (!dateRange.end || appointmentDate <= dateRange.end);
+      
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery || 
+        (appointment.patient?.firstName?.toLowerCase().includes(searchLower) || false) ||
+        (appointment.patient?.lastName?.toLowerCase().includes(searchLower) || false) ||
+        (appointment.doctor?.firstName?.toLowerCase().includes(searchLower) || false) ||
+        (appointment.doctor?.lastName?.toLowerCase().includes(searchLower) || false) ||
+        (appointment.treatment?.name?.toLowerCase().includes(searchLower) || false);
 
-    const matchesDateRange = !dateRange.start || !dateRange.end ? true :
-      isWithinInterval(new Date(apt.startTime), {
-        start: startOfDay(dateRange.start),
-        end: endOfDay(dateRange.end)
-      });
+      return matchesDateRange && matchesSearch;
+    } catch (error) {
+      console.error('Error filtering appointment:', appointment, error);
+      return false;
+    }
+  });
 
-    const matchesDate = selectedDate && view === 'calendar' ? 
-      isSameDay(new Date(apt.startTime), selectedDate) : 
-      true;
-
-    return matchesSearch && matchesDate && matchesStatus && matchesDoctors && matchesDateRange;
-  }) : [];
-
-  // Log whenever appointments or filtered appointments change
-  useEffect(() => {
-    console.log('Current appointments:', appointments);
-    console.log('Filtered appointments:', filteredAppointments);
-  }, [appointments, filteredAppointments]);
+  console.log('Filtered appointments:', filteredAppointments);
 
   const renderAppointmentDetails = () => {
     if (!selectedAppointment) return null;
@@ -656,16 +647,15 @@ const Appointments = () => {
                   
                   <Typography sx={{ color: '#04070b', opacity: 0.7 }}>Room:</Typography>
                   <Chip 
-                    label={selectedAppointment.room?.name}
+                    label={selectedAppointment.room.name.slice(-3)} 
                     size="small"
-                    sx={{
-                      bgcolor: '#dddbff',
-                      color: '#040316',
+                    variant="outlined"
+                    sx={{ 
                       borderRadius: '6px',
-                      width: 'fit-content',
-                      '& .MuiChip-label': {
-                        fontWeight: 500,
-                      },
+                      bgcolor: alpha('#306ad0', 0.1),
+                      borderColor: 'transparent',
+                      color: '#306ad0',
+                      fontWeight: 500,
                     }}
                   />
                 </Box>
@@ -892,13 +882,14 @@ const Appointments = () => {
             <Tooltip
               key={appointment.id}
               title={renderAppointmentPreview(appointment)}
-              placement="right"
+              placement="left-start"
               arrow
               PopperProps={{
                 sx: {
                   '& .MuiTooltip-tooltip': {
                     bgcolor: 'transparent',
                     p: 0,
+                    maxWidth: 'none',
                   },
                   '& .MuiTooltip-arrow': {
                     color: 'rgba(255, 255, 255, 0.98)',
@@ -907,6 +898,22 @@ const Appointments = () => {
                     },
                   },
                 },
+                modifiers: [
+                  {
+                    name: 'preventOverflow',
+                    options: {
+                      boundary: 'window',
+                      altAxis: true,
+                      padding: 16
+                    },
+                  },
+                  {
+                    name: 'flip',
+                    options: {
+                      fallbackPlacements: ['right-start', 'left-start', 'top', 'bottom'],
+                    },
+                  }
+                ]
               }}
             >
               <TableRow
@@ -966,7 +973,7 @@ const Appointments = () => {
                     <Typography variant="body2" sx={{ fontWeight: 500, color: '#04070b' }}>
                       {appointment.doctor?.firstName} {appointment.doctor?.lastName}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#666' }}>
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
                       {/* {appointment.doctor?.specializations?.map(s => s).join(', ')} */}
                     </Typography>
                   </Box>
@@ -1183,13 +1190,14 @@ const Appointments = () => {
                   <Tooltip
                     key={appointment._id}
                     title={renderAppointmentPreview(appointment)}
-                    placement="right"
+                    placement="left-start"
                     arrow
                     PopperProps={{
                       sx: {
                         '& .MuiTooltip-tooltip': {
                           bgcolor: 'transparent',
                           p: 0,
+                          maxWidth: 'none',
                         },
                         '& .MuiTooltip-arrow': {
                           color: 'rgba(255, 255, 255, 0.98)',
@@ -1198,6 +1206,22 @@ const Appointments = () => {
                           },
                         },
                       },
+                      modifiers: [
+                        {
+                          name: 'preventOverflow',
+                          options: {
+                            boundary: 'window',
+                            altAxis: true,
+                            padding: 16
+                          },
+                        },
+                        {
+                          name: 'flip',
+                          options: {
+                            fallbackPlacements: ['right-start', 'left-start', 'top', 'bottom'],
+                          },
+                        }
+                      ]
                     }}
                   >
                     <Box
@@ -1282,291 +1306,124 @@ const Appointments = () => {
     </Paper>
   );
 
-  return (
-    <Box sx={{ p: 3, bgcolor: '#f3f6fb', minHeight: '100vh' }}>
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        mb: 4
-      }}>
-        <Typography 
-          variant="h4" 
-          sx={{ 
-            color: '#04070b',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}
-        >
-          <EventIcon sx={{ color: '#306ad0' }} />
-          Appointments
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleCreateAppointment}
-          sx={{
-            bgcolor: '#306ad0',
-            '&:hover': {
-              bgcolor: '#5d91ed',
-            },
-            textTransform: 'none',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
-          }}
-        >
-          New Appointment
-        </Button>
-      </Box>
+  const renderFilters = () => (
+    <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexGrow: 1 }}>
+          <DatePicker
+            label="From Date"
+            value={dateRange.start}
+            onChange={(date) => handleDateRangeChange('start', date)}
+            slotProps={{
+              textField: {
+                size: "small",
+                sx: { minWidth: 150 }
+              }
+            }}
+          />
+          <DatePicker
+            label="To Date"
+            value={dateRange.end}
+            onChange={(date) => handleDateRangeChange('end', date)}
+            slotProps={{
+              textField: {
+                size: "small",
+                sx: { minWidth: 150 }
+              }
+            }}
+          />
+        </Box>
+      </LocalizationProvider>
 
-      <Paper 
-        sx={{ 
-          p: 3,
-          borderRadius: '12px',
-          boxShadow: '0 4px 6px rgba(48, 106, 208, 0.1)',
-          bgcolor: '#ffffff',
+      <TextField
+        size="small"
+        placeholder="Search appointments..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        sx={{ flexGrow: 1, maxWidth: 300 }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon sx={{ color: 'text.secondary' }} />
+            </InputAdornment>
+          ),
+        }}
+      />
+
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={handleCreateAppointment}
+        sx={{
+          bgcolor: '#306ad0',
+          '&:hover': {
+            bgcolor: '#2857b0',
+          },
         }}
       >
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={4}>
-            <TextField
-              fullWidth
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search appointments..."
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: '#306ad0' }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  '&:hover fieldset': {
-                    borderColor: '#82a8ea',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#306ad0',
-                  },
-                },
-              }}
-            />
-          </Grid>
+        New Appointment
+      </Button>
+    </Box>
+  );
 
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth >
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as AppointmentStatus | 'all')}
-                label="Status"
-                sx={{
-                  borderRadius: '8px',
-                  '&:hover fieldset': {
-                    borderColor: '#82a8ea',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#306ad0',
-                  },
-                }}
-              >
-                <MenuItem value="all">All Status</MenuItem>
-                {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                  <MenuItem key={value} value={value}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box 
-                        sx={{ 
-                          width: 8, 
-                          height: 8, 
-                          borderRadius: '50%',
-                          bgcolor: `${STATUS_COLORS[value as AppointmentStatus]}.main`
-                        }} 
-                      />
-                      {label}
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+  return (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom sx={{ color: '#04070b', fontWeight: 600 }}>
+        Appointments
+      </Typography>
 
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>Doctor</InputLabel>
-              <Select
-                multiple
-                value={selectedDoctors}
-                onChange={(e) => setSelectedDoctors(typeof e.target.value === 'string' ? [e.target.value] : e.target.value)}
-                label="Doctor"
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip 
-                        key={value} 
-                        label={value} 
-                        size="small"
-                        sx={{
-                          bgcolor: '#dddbff',
-                          color: '#040316',
-                          borderRadius: '6px',
-                          '& .MuiChip-label': {
-                            fontWeight: 500,
-                          },
-                        }}
-                      />
-                    ))}
-                  </Box>
-                )}
-                sx={{
-                  borderRadius: '8px',
-                  '&:hover fieldset': {
-                    borderColor: '#82a8ea',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#306ad0',
-                  },
-                }}
-              >
-                {doctors.map((doctor) => (
-                  <MenuItem key={doctor} value={doctor}>
-                    {doctor}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+      {renderFilters()}
 
-          <Grid item xs={12} sm={2}>
-            <Box sx={{ display: 'flex', gap: 1, }}>
-              <Tooltip title="List View">
-                <IconButton 
-                  onClick={() => setView('list')}
-                  sx={{ 
-                    color: view === 'list' ? '#306ad0' : '#04070b',
-                    bgcolor: view === 'list' ? 'rgba(48, 106, 208, 0.1)' : 'transparent',
-                    '&:hover': {
-                      bgcolor: 'rgba(48, 106, 208, 0.1)',
-                    },
-                  }}
-                >
-                  <ListAltIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Calendar View">
-                <IconButton 
-                  onClick={() => setView('calendar')}
-                  sx={{ 
-                    color: view === 'calendar' ? '#306ad0' : '#04070b',
-                    bgcolor: view === 'calendar' ? 'rgba(48, 106, 208, 0.1)' : 'transparent',
-                    '&:hover': {
-                      bgcolor: 'rgba(48, 106, 208, 0.1)',
-                    },
-                  }}
-                >
-                  <CalendarMonthIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Grid>
-        </Grid>
-
-        <Box sx={{ mt: 3 }}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            {view === 'calendar' ? (
-              <DatePicker
-                label="Select Date"
-                value={selectedDate}
-                onChange={setSelectedDate}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    sx: {
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '8px',
-                        '&:hover fieldset': {
-                          borderColor: '#82a8ea',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: '#306ad0',
-                        },
-                      },
-                    }
-                  }
-                }}
-              />
-            ) : (
-              <Box sx={{ display: 'flex', gap: 2, }}>
-                <DatePicker
-                  label="Start Date"
-                  value={dateRange.start}
-                  onChange={(date) => setDateRange(prev => ({ ...prev, start: date }))}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      sx: {
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '8px',
-                          '&:hover fieldset': {
-                            borderColor: '#82a8ea',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#306ad0',
-                          },
-                        },
-                      }
-                    }
-                  }}
-                />
-                <DatePicker
-                  label="End Date"
-                  value={dateRange.end}
-                  onChange={(date) => setDateRange(prev => ({ ...prev, end: date }))}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      sx: {
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '8px',
-                          '&:hover fieldset': {
-                            borderColor: '#82a8ea',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#306ad0',
-                          },
-                        },
-                      }
-                    }
-                  }}
-                />
-              </Box>
-            )}
-          </LocalizationProvider>
-        </Box>
-      </Paper>
-
-      <Box sx={{ mt: 3 }}>
-        {initialLoading ? (
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-            <Typography color="error">{error}</Typography>
-          </Box>
-        ) : (
-          view === 'list' ? renderListView() : renderCalendarView()
-        )}
+      <Box sx={{ mb: 3 }}>
+        <Tabs 
+          value={view} 
+          onChange={(_, newValue) => setView(newValue)}
+          sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              minWidth: 100,
+            },
+          }}
+        >
+          <Tab 
+            icon={<ListAltIcon />} 
+            label="List" 
+            value="list"
+            sx={{ 
+              display: 'flex',
+              flexDirection: 'row',
+              gap: 1,
+            }}
+          />
+          <Tab 
+            icon={<CalendarMonthIcon />} 
+            label="Calendar" 
+            value="calendar"
+            sx={{ 
+              display: 'flex',
+              flexDirection: 'row',
+              gap: 1,
+            }}
+          />
+        </Tabs>
       </Box>
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        view === 'list' ? renderListView() : renderCalendarView()
+      )}
 
       {renderAppointmentDetails()}
 
       <AppointmentModal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        open={!!selectedAppointment}
+        appointment={selectedAppointment}
+        onClose={() => setSelectedAppointment(null)}
         onAppointmentCreated={handleAppointmentCreated}
       />
     </Box>

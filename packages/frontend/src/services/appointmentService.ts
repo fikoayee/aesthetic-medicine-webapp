@@ -185,29 +185,29 @@ const updateAppointmentStatus = async (appointmentId: string, status: Appointmen
   }
 };
 
-const getAppointments = async (filters: AppointmentFilters): Promise<Appointment[]> => {
+const getAppointments = async (filters?: { startDate?: Date; endDate?: Date }) => {
   try {
-    const requestParams: Record<string, any> = {};
+    const params = new URLSearchParams();
     
-    if (filters.startDate) requestParams.startDate = filters.startDate.toISOString();
-    if (filters.endDate) requestParams.endDate = filters.endDate.toISOString();
-    if (filters.doctorId) requestParams.doctorId = filters.doctorId;
-    if (filters.patientId) requestParams.patientId = filters.patientId;
-    if (filters.status) requestParams.status = filters.status;
-
-    console.log('Fetching appointments with params:', requestParams);
-    
-    const response = await axiosInstance.get<ApiResponse<{ appointments: Appointment[] }>>('/appointments', {
-      params: requestParams
-    });
-
-    console.log('Raw API response:', response.data);
-    
-    if (response.data.data?.appointments) {
-      console.log('First appointment data:', response.data.data.appointments[0]);
-      return response.data.data.appointments;
+    if (filters?.startDate) {
+      params.append('startDate', filters.startDate.toISOString());
     }
-    return [];
+    if (filters?.endDate) {
+      params.append('endDate', filters.endDate.toISOString());
+    }
+
+    const queryString = params.toString();
+    const url = `/appointments${queryString ? `?${queryString}` : ''}`;
+    
+    console.log('Fetching appointments with URL:', url);
+    const response = await axiosInstance.get<ApiResponse<Appointment[]>>(url);
+    console.log('API Response:', response.data);
+    
+    // Check if we have appointments in the response
+    const appointments = response.data?.data?.appointments || response.data?.data || [];
+    console.log('Parsed appointments:', appointments);
+    
+    return appointments;
   } catch (error) {
     console.error('Error fetching appointments:', error);
     throw error;
