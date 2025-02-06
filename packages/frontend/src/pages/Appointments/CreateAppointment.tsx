@@ -38,9 +38,9 @@ interface NewPatientData {
 }
 
 interface AppointmentData {
-  doctorId: number | '';
-  treatmentId: number | '';
-  roomId: number | '';
+  doctorId: string;
+  treatmentId: string;
+  roomId: string;
   startTime: Date | null;
   price: number;
   note: string;
@@ -55,7 +55,7 @@ const CreateAppointment: React.FC = () => {
   const [patients, setPatients] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [patientType, setPatientType] = useState<'existing' | 'new'>('existing');
-  const [selectedPatientId, setSelectedPatientId] = useState<number | ''>('');
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('');
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({
     doctorId: '',
     treatmentId: '',
@@ -148,22 +148,37 @@ const CreateAppointment: React.FC = () => {
     setLoading(true);
     
     try {
-      const appointmentEndTime = new Date(appointmentData.startTime!);
+      if (!appointmentData.startTime) {
+        throw new Error('Start time is required');
+      }
+
+      const appointmentEndTime = new Date(appointmentData.startTime);
       appointmentEndTime.setHours(appointmentEndTime.getHours() + 1); // Default 1-hour appointment
 
+      // Format the new patient data if needed
+      const formattedNewPatient = patientType === 'new' ? {
+        ...newPatientData,
+        birthDate: newPatientData.birthDate ? newPatientData.birthDate.toISOString() : undefined,
+      } : undefined;
+
       const submitData = {
-        ...(patientType === 'existing' ? { patientId: selectedPatientId } : { newPatient: newPatientData }),
+        ...(patientType === 'existing' ? { patientId: selectedPatientId } : { newPatient: formattedNewPatient }),
         appointment: {
-          ...appointmentData,
-          endTime: appointmentEndTime,
+          doctorId: appointmentData.doctorId.toString(),
+          treatmentId: appointmentData.treatmentId.toString(),
+          roomId: appointmentData.roomId.toString(),
+          startTime: appointmentData.startTime.toISOString(),
+          endTime: appointmentEndTime.toISOString(),
+          price: appointmentData.price,
+          note: appointmentData.note,
         },
       };
 
       await appointmentService.createAppointment(submitData);
       toast.success('Appointment created successfully');
       navigate('/appointments');
-    } catch (error) {
-      toast.error('Error creating appointment');
+    } catch (error: any) {
+      toast.error(error.message || 'Error creating appointment');
       console.error('Error:', error);
     } finally {
       setLoading(false);
