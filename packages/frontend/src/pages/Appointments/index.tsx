@@ -97,77 +97,38 @@ const ROOMS = [
   { id: '6', name: 'Room 6' },
 ];
 
-// Mock data
-const MOCK_APPOINTMENTS = [
-  {
-    id: '1',
-    patientName: 'Anna Smith',
-    patientEmail: 'anna.smith@email.com',
-    patientPhone: '+1 234-567-8901',
-    treatmentName: 'Quick Checkup',
-    treatmentDuration: '15 min',
-    treatmentPrice: '$50',
-    doctorName: 'Dr. Brown',
-    doctorSpecialty: 'General',
-    startTime: '2025-02-02T09:00:00',
-    endTime: '2025-02-02T09:15:00',
-    roomId: '1',
-    status: APPOINTMENT_STATUS.SCHEDULED,
-    notes: 'First time patient',
-    color: '#4CAF50'
-  },
-  {
-    id: '2',
-    patientName: 'John Doe',
-    patientEmail: 'john.doe@email.com',
-    patientPhone: '+1 234-567-8902',
-    treatmentName: 'Dental Cleaning',
-    treatmentDuration: '30 min',
-    treatmentPrice: '$100',
-    doctorName: 'Dr. White',
-    doctorSpecialty: 'Dental',
-    startTime: '2025-02-02T10:00:00',
-    endTime: '2025-02-02T10:30:00',
-    roomId: '2',
-    status: APPOINTMENT_STATUS.IN_PROGRESS,
-    notes: 'Regular checkup',
-    color: '#2196F3'
-  },
-  {
-    id: '3',
-    patientName: 'Mary Johnson',
-    patientEmail: 'mary.j@email.com',
-    patientPhone: '+1 234-567-8903',
-    treatmentName: 'Root Canal',
-    treatmentDuration: '45 min',
-    treatmentPrice: '$300',
-    doctorName: 'Dr. Green',
-    doctorSpecialty: 'Dental Surgery',
-    startTime: '2025-02-02T11:00:00',
-    endTime: '2025-02-02T11:45:00',
-    roomId: '3',
-    status: APPOINTMENT_STATUS.COMPLETED,
-    notes: 'Follow-up needed in 2 weeks',
-    color: '#FF9800'
-  },
-  {
-    id: '4',
-    patientName: 'James Wilson',
-    patientEmail: 'j.wilson@email.com',
-    patientPhone: '+1 234-567-8904',
-    treatmentName: 'Full Checkup',
-    treatmentDuration: '1 hour',
-    treatmentPrice: '$200',
-    doctorName: 'Dr. Black',
-    doctorSpecialty: 'General',
-    startTime: '2025-02-02T13:00:00',
-    endTime: '2025-02-02T14:00:00',
-    roomId: '4',
-    status: APPOINTMENT_STATUS.CANCELLED,
-    notes: 'Rescheduling needed',
-    color: '#9C27B0'
-  }
+const APPOINTMENT_COLORS = [
+  '#3498db',  // Blue
+  '#e74c3c',  // Red
+  '#2ecc71',  // Green
+  '#9b59b6',  // Purple
+  '#f1c40f',  // Yellow
+  '#1abc9c',  // Turquoise
+  '#e67e22',  // Orange
+  '#34495e',  // Navy Blue
+  '#16a085',  // Dark Turquoise
+  '#c0392b',  // Dark Red
+  '#27ae60',  // Dark Green
+  '#8e44ad',  // Dark Purple
+  '#d35400',  // Dark Orange
+  '#2980b9',  // Dark Blue
+  '#f39c12'   // Dark Yellow
 ];
+
+const getAppointmentColor = (appointmentId: string) => {
+  // Use the appointment ID to consistently get the same color for the same appointment
+  const colorIndex = Array.from(appointmentId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % APPOINTMENT_COLORS.length;
+  const baseColor = APPOINTMENT_COLORS[colorIndex];
+  
+  return {
+    backgroundColor: baseColor,
+    '&:hover': {
+      backgroundColor: baseColor,
+      opacity: 0.9,
+      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+    }
+  };
+};
 
 const AppointmentBlock = ({ 
   appointment,
@@ -251,7 +212,7 @@ const AppointmentBlock = ({
           right: '4px',
           top,
           height,
-          backgroundColor: appointment.color,
+          ...getAppointmentColor(appointment.id),
           borderRadius: 1,
           color: 'white',
           padding: 1,
@@ -1173,14 +1134,148 @@ const Appointments = () => {
             ))}
 
             {filteredAppointments
-              .filter(apt => apt.room._id === room.id)
-              .map(appointment => (
-                <AppointmentBlock 
-                  key={appointment._id} 
-                  appointment={appointment}
-                  onMove={handleMoveAppointment}
-                />
-              ))}
+              .filter(apt => {
+                // Extract the room number from appointment's room name (last 3 digits)
+                const appointmentRoomNumber = apt.room.name.match(/\d{3}/)?.[0]?.slice(-1);
+                // Match with current room's number (last character)
+                const currentRoomNumber = room.id;
+                
+                // Debug log for room matching
+                console.log('Room matching:', {
+                  appointmentRoom: apt.room.name,
+                  appointmentRoomNumber,
+                  currentRoom: room.name,
+                  currentRoomNumber,
+                  matches: appointmentRoomNumber === currentRoomNumber,
+                  startTime: apt.startTime,
+                  endTime: apt.endTime
+                });
+
+                return appointmentRoomNumber === currentRoomNumber;
+              })
+              .map(appointment => {
+                const startTime = parseISO(appointment.startTime);
+                const endTime = parseISO(appointment.endTime);
+                const startHour = startTime.getHours();
+                const startMinutes = startTime.getMinutes();
+                const durationMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+                
+                // Calculate position
+                const top = ((startHour - START_HOUR) * 60 + startMinutes) * (SLOT_HEIGHT / 60) + 50;
+                const height = durationMinutes * (SLOT_HEIGHT / 60);
+
+                // Debug log for appointment positioning
+                console.log('Appointment positioning:', {
+                  id: appointment._id,
+                  patient: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
+                  startTime: format(startTime, 'HH:mm'),
+                  endTime: format(endTime, 'HH:mm'),
+                  top,
+                  height,
+                  room: appointment.room.name,
+                  roomMatch: {
+                    appointmentRoom: appointment.room.name,
+                    currentRoom: room.name
+                  }
+                });
+
+                return (
+                  <Tooltip
+                    key={appointment._id}
+                    title={renderAppointmentPreview(appointment)}
+                    placement="right"
+                    arrow
+                    PopperProps={{
+                      sx: {
+                        '& .MuiTooltip-tooltip': {
+                          bgcolor: 'transparent',
+                          p: 0,
+                        },
+                        '& .MuiTooltip-arrow': {
+                          color: 'rgba(255, 255, 255, 0.98)',
+                          '&::before': {
+                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                          },
+                        },
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        left: '4px',
+                        right: '4px',
+                        top,
+                        height,
+                        ...getAppointmentColor(appointment._id),
+                        borderRadius: '8px',
+                        color: 'white',
+                        padding: durationMinutes <= 30 ? '4px 8px' : 1.5,
+                        fontSize: durationMinutes <= 30 ? '0.75rem' : '0.875rem',
+                        zIndex: 1000,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onClick={() => handleOpenDetails(appointment)}
+                    >
+                      {durationMinutes <= 30 ? (
+                        // Compact view for short appointments
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 0.5,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              fontWeight: 'bold',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {`${format(startTime, 'HH:mm')} ${appointment.patient.firstName} ${appointment.patient.lastName}`}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        // Full view for longer appointments
+                        <>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              fontWeight: 'bold',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {appointment.patient.firstName} {appointment.patient.lastName}
+                          </Typography>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {appointment.treatment.name}
+                          </Typography>
+                          <Typography variant="caption">
+                            {format(startTime, 'HH:mm')} - {format(endTime, 'HH:mm')}
+                          </Typography>
+                        </>
+                      )}
+                    </Box>
+                  </Tooltip>
+                );
+              })}
           </Box>
         ))}
       </Box>
