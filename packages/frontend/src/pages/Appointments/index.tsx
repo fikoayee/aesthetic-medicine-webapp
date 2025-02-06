@@ -422,10 +422,9 @@ const Appointments = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all');
-  const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
+  const [view, setView] = useState<'list' | 'calendar'>('list');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [view, setView] = useState<'list' | 'calendar'>('calendar');
   const navigate = useNavigate();
 
   // Get unique doctors from appointments
@@ -473,7 +472,7 @@ const Appointments = () => {
   };
 
   const handleCreateAppointment = () => {
-    navigate('/appointments/create');
+    setIsModalOpen(true);
   };
 
   const handleMoveAppointment = (id: string, roomId: string, hour: number, minutes: number) => {
@@ -1421,9 +1420,8 @@ const Appointments = () => {
       {renderAppointmentDetails()}
 
       <AppointmentModal
-        open={!!selectedAppointment}
-        appointment={selectedAppointment}
-        onClose={() => setSelectedAppointment(null)}
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         onAppointmentCreated={handleAppointmentCreated}
       />
     </Box>
